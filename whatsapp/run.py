@@ -1,3 +1,6 @@
+#!/opt/bitnami/python/bin/python
+#-*- coding: utf-8 -*-
+
 from stack import YowsupEchoStack
 import logging
 import time
