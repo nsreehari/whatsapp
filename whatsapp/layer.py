@@ -2,18 +2,29 @@ from yowsup.layers.interface                           import YowInterfaceLayer,
 
 import time
 from copy import copy
-import pickle
+import cPickle
 import random
 import requests
+
+TAGSFILE = 'tagsfile.pkl'
 
 class EchoLayer(YowInterfaceLayer):
     tagqueue = {}
     stagetag = {}
+    initdone = False
+
+    def init(self):
+        try:
+            tagsfile = open(TAGSFILE, "rb")
+            self.tagqueue = cPickle.load(tagsfile)
+            tagsfile.close()
+        except IOError as e:
+            pass
 
     def chitchatresponse(self, messageBody):
 
         chitchat_file = open('chitchat.pkl', 'rb')
-        chitchat = pickle.load(chitchat_file)
+        chitchat = cPickle.load(chitchat_file)
         chitchat_file.close()
 
         if messageBody.lower() in chitchat.keys():
@@ -47,6 +58,8 @@ class EchoLayer(YowInterfaceLayer):
 
 
     def parsecapabilities(self, messageBody, phonenum):
+
+        self.initdone or self.init()
 
         keyword = messageBody.split()[0]
 
@@ -86,6 +99,9 @@ class EchoLayer(YowInterfaceLayer):
             self.tagqueue[tagname] = copy(messageProtocolEntity)
 
             #backup the self.tagqueue pending
+            output = open(TAGSFILE, 'wb')
+            cPickle.dump(self.tagqueue, output)
+            output.close()
 
             del self.stagetag[phonenum]
 
