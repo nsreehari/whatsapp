@@ -44,7 +44,7 @@ class EchoLayer(YowInterfaceLayer):
     def getquote(self):
 
         lovequote_file = open('lovequotes.pkl', 'rb')
-        lovequotes = pickle.load(lovequote_file)
+        lovequotes = cPickle.load(lovequote_file)
         lovequote_file.close()
 
         return random.choice(lovequotes)
