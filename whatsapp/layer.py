@@ -1,4 +1,7 @@
 from yowsup.layers.interface                           import YowInterfaceLayer, ProtocolEntityCallback
+from yowsup.layers.protocol_media.protocolentities import RequestUploadIqProtocolEntity, ImageDownloadableMediaMessageProtocolEntity, AudioDownloadableMediaMessageProtocolEntity
+from yowsup.layers.protocol_media.mediauploader import MediaUploader 
+from yowsup.layers.protocol_media.mediadownloader import MediaDownloader 
 
 import logging
 import time
@@ -12,17 +15,18 @@ logger = logging.getLogger(__name__)
 TAGSFILE = 'tagsfile.pkl'
 
 class EchoLayer(YowInterfaceLayer):
-    tagqueue = {}
-    stagetag = {}
-    initdone = False
 
-    def init(self):
-        try:
-            tagsfile = open(TAGSFILE, "rb")
-            self.tagqueue = cPickle.load(tagsfile)
-            tagsfile.close()
-        except IOError as e:
-            pass
+    def __init__(self):
+        super(EchoLayer, self).__init__()
+        YowInterfaceLayer.__init__(self)
+        self.connected = False
+    	self.tagqueue = {}
+    	self.stagetag = {}
+
+        tagsfile = open(TAGSFILE, "rb")
+        self.tagqueue = cPickle.load(tagsfile)
+        tagsfile.close()
+
 
     def chitchatresponse(self, messageBody):
 
@@ -59,16 +63,17 @@ class EchoLayer(YowInterfaceLayer):
 
     def parsecapabilities(self, messageBody, phonenum):
 
-        self.initdone or self.init()
-
         keyword = messageBody.split()[0]
 
         if keyword == "quote":
             return ('text', self.getquote())
         elif keyword == "name":
             return ('text', "Wait, I will soon have something cool")
-        elif keyword == "new":
-            return ('text', "I am so fresh on the block ... that's new i guess :)")
+        elif keyword == "img":
+            image_number = messageBody.split()[1]
+	    if image_number in ['1', '2', '3', '4', '5', '6', '7']:
+            	return ('image', '/home/bitnami1/bhandara/website/img/t%s.jpg' % image_number )
+
         elif keyword == "savetag":
             keywords = messageBody.split()
             if len(keywords) != 2:
@@ -80,19 +85,15 @@ class EchoLayer(YowInterfaceLayer):
             self.stagetag[phonenum] = tagname
             return ('text', 'Please send the content for tag: ' + tagname)
 
-        elif keyword in self.tagqueue.keys():
-            return ('readymade', self.tagqueue[keyword])
         else:
             return ('text', self.gethelpstring())
 
 
     def genresponse(self, messageProtocolEntity):
 
-        NOHANDLEMSG = 'I do not handle these messages'
-
         phonenum = messageProtocolEntity.getFrom(False)
         logging.info( phonenum)
-        logging.info( self.stagetag)
+        #logging.info( self.stagetag)
         if phonenum in self.stagetag.keys():
             tagname = self.stagetag[phonenum]
 
@@ -105,37 +106,21 @@ class EchoLayer(YowInterfaceLayer):
 
             del self.stagetag[phonenum]
 
-            return messageProtocolEntity
+            return ('text', 'Successfully attached to tag:' + tagname)
+
+        messagebody = messageProtocolEntity.getBody()
+        keyword = messagebody.split()[0]
+        if keyword in self.tagqueue.keys():
+            return ('readymade', self.tagqueue[keyword])
 
         if messageProtocolEntity.getType() == 'media':
-            #for now, for all media messages, response is just echoed
-            #messageProtocolEntity.setBody(NOHANDLEMSG)
-            return messageProtocolEntity
+            return ('text', 'no media messages are handled')
 
         if messageProtocolEntity.getType() == 'text':
-            messagebody = messageProtocolEntity.getBody()
-            #if messagebody.startswith("#"):
-	    if True:
-                (restype, response) = self.parsecapabilities(messagebody, phonenum)
-            #else:
-                #(restype, response) = self.chitchatresponse(messagebody)
-                #(restype, response) = self.APIresponse(messagebody)
-                #messageProtocolEntity.setBody(NOHANDLEMSG)
-                #return messageProtocolEntity
+            (restype, response) = self.parsecapabilities(messagebody, phonenum)
+            return (restype, response)
 
-            if (restype == 'text'):
-                if response != "" and response != "<no results>" and len(response) < 250:
-                    safe_response = response.encode('ascii','ignore')
-                    messageProtocolEntity.setBody(safe_response)
-                elif len(messagebody.split(' ')) == 1:
-                    messageProtocolEntity.setBody(":)")
-                else:
-                    messageProtocolEntity.setBody("Can I answer every question? Nobody likes a know-it-all!!!")
 
-                return messageProtocolEntity
-
-            if (restype == 'readymade'):
-                return response
 
     @ProtocolEntityCallback("message")
     def onMessage(self, messageProtocolEntity):
@@ -144,14 +129,29 @@ class EchoLayer(YowInterfaceLayer):
             #time.sleep(0.454)
             logging.info( messageProtocolEntity.getBody())
 
-        response = self.genresponse(messageProtocolEntity)
 
-        if response.getType() == 'text':
-            self.onTextMessage(response)
+
+        (restype, response) = self.genresponse(messageProtocolEntity)
+
+        if restype == 'image':
+	    self.image_send(messageProtocolEntity.getFrom(), response )
+
+        elif restype == 'text':
+            if response != "" and response != "<no results>" and len(response) < 250:
+                safe_response = response.encode('ascii','ignore')
+                messageProtocolEntity.setBody(safe_response)
+            elif len(messagebody.split(' ')) == 1:
+                messageProtocolEntity.setBody(":)")
+            else:
+                messageProtocolEntity.setBody("Can I answer every question? Nobody likes a know-it-all!!!")
+
+            self.onTextMessage(messageProtocolEntity)
+            self.toLower(response.forward(messageProtocolEntity.getFrom()))
+
         elif response.getType() == 'media':
             self.onMediaMessage(response)
+            self.toLower(response.forward(messageProtocolEntity.getFrom()))
 
-        self.toLower(response.forward(messageProtocolEntity.getFrom()))
         self.toLower(messageProtocolEntity.ack())
         self.toLower(messageProtocolEntity.ack(True))
 
@@ -174,50 +174,71 @@ class EchoLayer(YowInterfaceLayer):
             logging.info(("Echoing vcard (%s, %s) to %s" % (messageProtocolEntity.getName(), messageProtocolEntity.getCardData(), messageProtocolEntity.getFrom(False))))
 
 
-
-
-class SendLayer(YowInterfaceLayer):
-
-    #This message is going to be replaced by the @param message in YowsupSendStack construction
-    #i.e. list of (jid, message) tuples
-    PROP_MESSAGES = "org.openwhatsapp.yowsup.prop.sendclient.queue"
-    
-    
-    def __init__(self):
-        super(SendLayer, self).__init__()
-        self.ackQueue = []
-        self.lock = threading.Condition()
-
-    #call back function when there is a successful connection to whatsapp server
     @ProtocolEntityCallback("success")
-    def onSuccess(self, successProtocolEntity):
-        self.lock.acquire()
-        for target in self.getProp(self.__class__.PROP_MESSAGES, []):
-            #getProp() is trying to retreive the list of (jid, message) tuples, if none exist, use the default []
-            phone, message = target
-            if '@' in phone:
-                messageEntity = TextMessageProtocolEntity(message, to = phone)
-            elif '-' in phone:
-                messageEntity = TextMessageProtocolEntity(message, to = "%s@g.us" % phone)
-            else:
-                messageEntity = TextMessageProtocolEntity(message, to = "%s@s.whatsapp.net" % phone)
-            #append the id of message to ackQueue list
-            #which the id of message will be deleted when ack is received.
-            self.ackQueue.append(messageEntity.getId())
-            self.toLower(messageEntity)
-        self.lock.release()
+    def onSuccess(self, entity):
+        self.connected = True
+        logger.info("Logged in! Auth")
 
-    #after receiving the message from the target number, target number will send a ack to sender(us)
-    @ProtocolEntityCallback("ack")
-    def onAck(self, entity):
-        self.lock.acquire()
-        #if the id match the id in ackQueue, then pop the id of the message out
-        if entity.getId() in self.ackQueue:
-            self.ackQueue.pop(self.ackQueue.index(entity.getId()))
-            
-        if not len(self.ackQueue):
-            self.lock.release()
-            logger.info("Message sent")
-            raise KeyboardInterrupt()
+    @ProtocolEntityCallback("failure")
+    def onFailure(self, entity):
+        self.connected = False
+        logger.info("Login Failed, reason: %s" % entity.getReason())
 
-        self.lock.release()
+    def image_send(self, number, path, caption = None):
+            jid = self.normalizeJid(number)
+            entity = RequestUploadIqProtocolEntity(RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE, filePath=path)
+            successFn = lambda successEntity, originalEntity: self.onRequestUploadResult(jid, path, successEntity, originalEntity, caption)
+            errorFn = lambda errorEntity, originalEntity: self.onRequestUploadError(jid, path, errorEntity, originalEntity)
+
+            self._sendIq(entity, successFn, errorFn)
+
+
+
+    def normalizeJid(self, number):
+        if '@' in number:
+            return number
+        elif "-" in number:
+            return "%s@g.us" % number
+
+        return "%s@s.whatsapp.net" % number
+
+    ########### callbacks ############
+
+    def onRequestUploadResult(self, jid, filePath, resultRequestUploadIqProtocolEntity, requestUploadIqProtocolEntity, caption = None):
+
+        if requestUploadIqProtocolEntity.mediaType == RequestUploadIqProtocolEntity.MEDIA_TYPE_AUDIO:
+            doSendFn = self.doSendAudio
+        else:
+            doSendFn = self.doSendImage
+
+        if resultRequestUploadIqProtocolEntity.isDuplicate():
+            doSendFn(filePath, resultRequestUploadIqProtocolEntity.getUrl(), jid,
+                             resultRequestUploadIqProtocolEntity.getIp(), caption)
+        else:
+            successFn = lambda filePath, jid, url: doSendFn(filePath, url, jid, resultRequestUploadIqProtocolEntity.getIp(), caption)
+            mediaUploader = MediaUploader(jid, self.getOwnJid(), filePath,
+                                      resultRequestUploadIqProtocolEntity.getUrl(),
+                                      resultRequestUploadIqProtocolEntity.getResumeOffset(),
+                                      successFn, self.onUploadError, self.onUploadProgress, async=False)
+            mediaUploader.start()
+
+    def onRequestUploadError(self, jid, path, errorRequestUploadIqProtocolEntity, requestUploadIqProtocolEntity):
+        logger.error("Request upload for file %s for %s failed" % (path, jid))
+
+    def onUploadError(self, filePath, jid, url):
+        logger.error("Upload file %s to %s for %s failed!" % (filePath, url, jid))
+
+    def onUploadProgress(self, filePath, jid, url, progress):
+	return
+        #sys.stdout.write("%s => %s, %d%% \r" % (os.path.basename(filePath), jid, progress))
+        #sys.stdout.flush()
+
+
+    def doSendImage(self, filePath, url, to, ip = None, caption = None):
+        entity = ImageDownloadableMediaMessageProtocolEntity.fromFilePath(filePath, url, ip, to, caption = caption)
+        self.toLower(entity)
+
+    def doSendAudio(self, filePath, url, to, ip = None, caption = None):
+        entity = AudioDownloadableMediaMessageProtocolEntity.fromFilePath(filePath, url, ip, to)
+        self.toLower(entity)
+
