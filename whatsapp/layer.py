@@ -95,7 +95,7 @@ class EchoLayer(YowInterfaceLayer):
         logging.info( phonenum)
         #logging.info( self.stagetag)
         if phonenum in self.stagetag.keys():
-            tagname = self.stagetag[phonenum]
+            tagname = self.stagetag[phonenum].lower()
 
             self.tagqueue[tagname] = copy(messageProtocolEntity)
 
@@ -109,7 +109,7 @@ class EchoLayer(YowInterfaceLayer):
             return ('text', 'Successfully attached to tag:' + tagname)
 
         messagebody = messageProtocolEntity.getBody()
-        keyword = messagebody.split()[0]
+        keyword = messagebody.split()[0].lower()
         if keyword in self.tagqueue.keys():
             return ('readymade', self.tagqueue[keyword])
 
