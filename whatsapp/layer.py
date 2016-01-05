@@ -46,7 +46,7 @@ class EchoLayer(YowInterfaceLayer):
 
     def getquote(self):
 
-        lovequote_file = open('lovequotes.pkl', 'rb')
+        lovequote_file = open('quotes.pkl', 'rb')
         lovequotes = cPickle.load(lovequote_file)
         lovequote_file.close()
 
