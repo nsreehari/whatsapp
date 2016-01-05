@@ -53,10 +53,7 @@ class EchoLayer(YowInterfaceLayer):
         return random.choice(lovequotes)
 
     def gethelpstring(self):
-        helpstring = "I did not understand that but I have a set of amazing things you can try\n"
-        helpstring = helpstring + "#quote : For those soulful quotes :)\n"
-        helpstring = helpstring + "#name <Friend's name> : Just tell your friend's name and check what happens!\n"
-        helpstring = helpstring + "#new : Keep yourself updated with what's new with me\n"
+        helpstring = "I do not understand that. You can try something like 'quote'"
         return helpstring
 
 
@@ -66,13 +63,13 @@ class EchoLayer(YowInterfaceLayer):
 
         keyword = messageBody.split()[0]
 
-        if keyword == "#quote":
+        if keyword == "quote":
             return ('text', self.getquote())
-        elif keyword == "#name":
+        elif keyword == "name":
             return ('text', "Wait, I will soon have something cool")
-        elif keyword == "#new":
+        elif keyword == "new":
             return ('text', "I am so fresh on the block ... that's new i guess :)")
-        elif keyword == "#savetag":
+        elif keyword == "savetag":
             keywords = messageBody.split()
             if len(keywords) != 2:
                 return ('text', 'Invalid SAVETAG')
@@ -117,13 +114,14 @@ class EchoLayer(YowInterfaceLayer):
 
         if messageProtocolEntity.getType() == 'text':
             messagebody = messageProtocolEntity.getBody()
-            if messagebody.startswith("#"):
+            #if messagebody.startswith("#"):
+	    if True:
                 (restype, response) = self.parsecapabilities(messagebody, phonenum)
-            else:
+            #else:
                 #(restype, response) = self.chitchatresponse(messagebody)
                 #(restype, response) = self.APIresponse(messagebody)
-                messageProtocolEntity.setBody(NOHANDLEMSG)
-                return messageProtocolEntity
+                #messageProtocolEntity.setBody(NOHANDLEMSG)
+                #return messageProtocolEntity
 
             if (restype == 'text'):
                 if response != "" and response != "<no results>" and len(response) < 250:
