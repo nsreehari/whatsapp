@@ -23,7 +23,7 @@ class EchoLayer(YowInterfaceLayer):
         super(EchoLayer, self).__init__()
         YowInterfaceLayer.__init__(self)
         self.connected = False
-        self.serve = Serve()
+        self.serve = Serve(self.sendMessage)
 
 
     @ProtocolEntityCallback("message")
@@ -32,20 +32,21 @@ class EchoLayer(YowInterfaceLayer):
         if recdMsg.getType() == 'text':
             logging.info( recdMsg.getBody())
 
-        (restype, response) = self.serve.getResponse(recdMsg)
-
-        if restype == 'image':
-            self.image_send(recdMsg.getFrom(), response)
-
-        elif restype == 'text':
-            self.message_send(recdMsg.getFrom(), response)
-
-        elif restype == 'readymade':
-            self.logResponse(response)
-            self.toLower(response.forward(recdMsg.getFrom()))
+        self.serve.getResponse(recdMsg)
 
         self.toLower(recdMsg.ack())
         self.toLower(recdMsg.ack(True))
+
+    def sendMessage(self, phonenum, restype, response):
+        if restype == 'image':
+            self.image_send(phonenum, response)
+
+        elif restype == 'text':
+            self.message_send(phonenum, response)
+
+        elif restype == 'readymade':
+            self.logResponse(response)
+            self.toLower(response.forward(phonenum))
 
     @ProtocolEntityCallback("receipt")
     def onReceipt(self, entity):

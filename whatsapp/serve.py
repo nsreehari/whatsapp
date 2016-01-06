@@ -15,9 +15,10 @@ TEMPDOWNLOADFILE = '/tmp/X.jpg'
 
 class Serve():
 
-    def __init__(self):
+    def __init__(self, cbsendmsg):
         self.tagqueue = {}
         self.stagetag = {}
+	self.cbSendMsg = cbsendmsg
 
         try:
         	tagsfile = open(TAGSFILE, "rb")
@@ -90,7 +91,7 @@ class Serve():
     def getResponse(self, message):
 
         phonenum = message.getFrom(False)
-        logging.info( phonenum)
+        ret = lambda a,b: self.cbSendMsg(phonenum, a, b)
         #logging.info( self.stagetag)
         if phonenum in self.stagetag.keys():
             tagname = self.stagetag[phonenum].lower()
@@ -104,13 +105,13 @@ class Serve():
 
             del self.stagetag[phonenum]
 
-            return ('text', 'Successfully attached to tag:' + tagname)
+            return ret('text', 'Successfully attached to tag:' + tagname)
 
         if message.getType() == 'text':
             messagebody = message.getBody()
             keyword = messagebody.split()[0].lower()
             if keyword in self.tagqueue.keys():
-                   return ('readymade', self.tagqueue[keyword])
+                   return ret('readymade', self.tagqueue[keyword])
 
         if message.getType() == 'media':
 
@@ -120,12 +121,12 @@ class Serve():
                 self.downloadURL( media_url, savepath)
 		from subprocess import call
                 call(["/home/bitnami1/bhandara/gitpush.script"])
-            	return ('text', 'saved %s' % 8)
-            return ('text', 'no media messages are handled')
+            	return ret('text', 'saved %s' % 8)
+            return ret('text', 'no media messages are handled')
 
         if message.getType() == 'text':
             messagebody = message.getBody()
             (restype, response) = self.parsecapabilities(messagebody, phonenum)
-            return (restype, response)
+            return ret(restype, response)
 
 
