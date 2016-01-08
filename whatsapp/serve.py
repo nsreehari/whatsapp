@@ -88,15 +88,16 @@ class Serve():
             return ('text', self.gethelpstring())
 
 
-    def getResponse(self, message):
+    def getResponse(self, jsondict):
 
-        phonenum = message.getFrom(False)
+
+        phonenum = jsondict['phonenum']
         ret = lambda a,b: self.cbSendMsg(phonenum, a, b)
         #logging.info( self.stagetag)
         if phonenum in self.stagetag.keys():
             tagname = self.stagetag[phonenum].lower()
 
-            self.tagqueue[tagname] = copy(message)
+            self.tagqueue[tagname] = copy(jsondict['msg'])
 
             #backup the self.tagqueue pending
             output = open(TAGSFILE, 'wb')
@@ -107,16 +108,16 @@ class Serve():
 
             return ret('text', 'Successfully attached to tag:' + tagname)
 
-        if message.getType() == 'text':
-            messagebody = message.getBody()
+        if jsondict['msgtype']  == 'text':
+            messagebody = jsondict['msgbody'] 
             keyword = messagebody.split()[0].lower()
             if keyword in self.tagqueue.keys():
                    return ret('readymade', self.tagqueue[keyword])
 
-        if message.getType() == 'media':
+        if jsondict['msgtype']  == 'media':
 
-            if message.getMediaType() in ("image"):
-                media_url = message.getMediaUrl()
+            if jsondict['mediatype']  in ("image"):
+                media_url = jsondict['mediaurl'] 
                 savepath = TEMPDOWNLOADFILE
                 self.downloadURL( media_url, savepath)
 		from subprocess import call
@@ -124,8 +125,8 @@ class Serve():
             	return ret('text', 'saved %s' % 8)
             return ret('text', 'no media messages are handled')
 
-        if message.getType() == 'text':
-            messagebody = message.getBody()
+        if jsondict['msgtype'] == 'text':
+            messagebody = jsondict['msgbody']
             (restype, response) = self.parsecapabilities(messagebody, phonenum)
             return ret(restype, response)
 
