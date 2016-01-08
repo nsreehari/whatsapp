@@ -15,10 +15,16 @@ import requests
 from urllib import urlretrieve
 from sys import version_info
 import json
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-from azure.servicebus import ServiceBusService, Message, Queue
+from azure.servicebus import ServiceBusService, Message
+from Queue import Queue
+
+SendQueue = Queue()
+CompletedSendQueue = []
+
 
 class EchoLayer(YowInterfaceLayer):
 
@@ -32,12 +38,6 @@ class EchoLayer(YowInterfaceLayer):
             service_namespace='msgtestsb',
             shared_access_key_name='RootManageSharedAccessKey',
             shared_access_key_value='Ar9fUCZQdTL7cVWgerdNOB7sbQp0cWEeQyTRYUjKwpk=')
-        queue_options = Queue()
-        queue_options.max_size_in_megabytes = '5120'
-        queue_options.default_message_time_to_live = 'PT1M'
-
-        self.bus_service.create_queue('process_incoming', queue_options)
-        self.bus_service.create_queue('whatsapp_sender', queue_options)
 
     @ProtocolEntityCallback("message")
     def onMessage(self, recdMsg):
@@ -58,28 +58,45 @@ class EchoLayer(YowInterfaceLayer):
         if jsondict['msgtype'] == 'text':
             logging.info( recdMsg.getBody())
 
-#        self.serve.getResponse(jsondict)
+        #self.serve.getResponse(jsondict)
         msg = Message(json.dumps(jsondict))
         self.bus_service.send_queue_message('process_incoming', msg)
 
         self.toLower(recdMsg.ack())
         self.toLower(recdMsg.ack(True))
 
-    def sendMessage(self, phonenum, restype, response):
-        if restype == 'image':
-            self.image_send(phonenum, response)
+        self.sendMessages()
 
-        elif restype == 'text':
-            self.message_send(phonenum, response)
+    def sendMessages(self):
+            try:
+                sendmsg = SendQueue.get_nowait()
+            except:
+                return
+            
+            jsondict = json.loads(sendmsg)
+            phonenum = jsondict['phonenum']
+            restype = jsondict['restype']
+            response = jsondict['response']
+         
+            logging.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
+            if restype == 'image':
+                self.image_send(phonenum, response)
+         
+            elif restype == 'text':
+                self.message_send(phonenum, response)
+         
+            elif restype == 'readymade':
+                self.logResponse(response)
+                self.toLower(response.forward(phonenum))
 
-        elif restype == 'readymade':
-            self.logResponse(response)
-            self.toLower(response.forward(phonenum))
+            # handling completed queue in azure service not yet implemented
+            #CompletedSendQueue.append(key[1])
 
     @ProtocolEntityCallback("receipt")
     def onReceipt(self, entity):
         self.toLower(entity.ack())
 
+        self.sendMessages()
 
 
     def logResponse(self, msg):
@@ -100,6 +117,7 @@ class EchoLayer(YowInterfaceLayer):
     def onSuccess(self, entity):
         self.connected = True
         logger.info("Logged in! Auth")
+        self.sendMessages()
 
     @ProtocolEntityCallback("failure")
     def onFailure(self, entity):
@@ -182,5 +200,62 @@ class EchoLayer(YowInterfaceLayer):
             media_size = message.getMediaSize(),
             media_url = message.getMediaUrl()
             )
+
+
+from yowsup.stacks import YowStack
+from yowsup.layers import YowLayerEvent
+from yowsup.layers.auth                        import YowCryptLayer, YowAuthenticationProtocolLayer, AuthError
+from yowsup.layers.coder                       import YowCoderLayer
+from yowsup.layers.network                     import YowNetworkLayer
+from yowsup.layers.protocol_messages           import YowMessagesProtocolLayer
+from yowsup.layers.protocol_media              import YowMediaProtocolLayer
+from yowsup.layers.stanzaregulator             import YowStanzaRegulator
+from yowsup.layers.protocol_receipts           import YowReceiptProtocolLayer
+from yowsup.layers.protocol_acks               import YowAckProtocolLayer
+from yowsup.layers.logger                      import YowLoggerLayer
+from yowsup.layers.protocol_iq                 import YowIqProtocolLayer
+from yowsup.layers.protocol_calls              import YowCallsProtocolLayer
+from yowsup.layers                             import YowParallelLayer
+from yowsup.common import YowConstants
+from yowsup import env
+
+
+class YowsupEchoStack(object):
+    def __init__(self, credentials, encryptionEnabled = False):
+        if encryptionEnabled:
+            from yowsup.layers.axolotl                     import YowAxolotlLayer
+            layers = (
+                EchoLayer,
+                YowParallelLayer([YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer, YowAckProtocolLayer, YowMediaProtocolLayer, YowIqProtocolLayer, YowCallsProtocolLayer]),
+                YowAxolotlLayer,
+                YowLoggerLayer,
+                YowCoderLayer,
+                YowCryptLayer,
+                YowStanzaRegulator,
+                YowNetworkLayer
+            )
+        else:
+            layers = (
+                EchoLayer,
+                YowParallelLayer([YowAuthenticationProtocolLayer, YowMessagesProtocolLayer, YowReceiptProtocolLayer, YowAckProtocolLayer, YowMediaProtocolLayer, YowIqProtocolLayer, YowCallsProtocolLayer]),
+                YowLoggerLayer,
+                YowCoderLayer,
+                YowCryptLayer,
+                YowStanzaRegulator,
+                YowNetworkLayer
+            )
+
+        self.stack = YowStack(layers)
+        self.stack.setCredentials(credentials)
+
+    def start(self):
+        self.stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_CONNECT))
+        try:
+            logging.info("Whatsapp IS STARTING : ReceiveStack");
+            self.stack.loop(timeout = 1, count = 100)
+            logging.info("Stopping ... ");
+        except AuthError as e:
+            logging.info("Authentication Error: %s" % e.message)
+
 
 
