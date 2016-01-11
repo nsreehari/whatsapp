@@ -101,7 +101,10 @@ class Serve():
         if phonenum in self.stagetag.keys():
             tagname = self.stagetag[phonenum].lower()
 
-            self.tagqueue[tagname] = copy(jsondict['msg'])
+            try:
+                self.tagqueue[tagname] = ['readymade', copy(jsondict['msg'])]
+            except:
+                self.tagqueue[tagname] = ['text', jsondict['msgbody']]
 
             #backup the self.tagqueue pending
             output = open(TAGSFILE, 'wb')
@@ -116,7 +119,7 @@ class Serve():
             messagebody = jsondict['msgbody'] 
             keyword = messagebody.split()[0].lower()
             if keyword in self.tagqueue.keys():
-                   return ret('readymade', self.tagqueue[keyword])
+                   return ret(self.tagqueue[keyword][0], self.tagqueue[keyword][1])
 
         if jsondict['msgtype']  == 'media':
 

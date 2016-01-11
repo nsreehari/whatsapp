@@ -55,7 +55,6 @@ class EchoLayer(YowInterfaceLayer):
             if jsondict['mediatype'] in ["image", "audio", "video"]:
                 jsondict['mediaurl'] = recdMsg.getMediaUrl()
 
-        #jsondict['msg'] = recdMsg # pass whole message for backup just in case:)
         
         if jsondict['msgtype'] == 'text':
             logging.info( recdMsg.getBody())
@@ -65,6 +64,7 @@ class EchoLayer(YowInterfaceLayer):
             msg = Message(pushjson)
             self.bus_service.send_queue_message('process_incoming', msg)
         else:
+            jsondict['msg'] = recdMsg # pass whole message for backup just in case:)
             retjson = self.serve.getResponseWrapper(pushjson)
             SendQueue.put(retjson)
 
