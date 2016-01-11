@@ -67,24 +67,29 @@ class Serve():
                 image_number = '1'
             return ('image', '/home/bitnami1/bhandara/website/img/t%s.jpg' % image_number )
 
-        elif keyword == "savetag":
+        elif keyword == "get":
+            keywords = messageBody.split()
+            tagname = keywords[1].lower()
+            if tagname in self.tagqueue.keys():
+                return (self.tagqueue[tagname][0], self.tagqueue[tagname][1])
+        elif keyword == "set":
             keywords = messageBody.split()
             if len(keywords) != 2:
-                return ('text', 'Invalid SAVETAG')
+                return ('text', 'Invalid TAGNAME')
             tagname = keywords[1]
             if tagname in self.tagqueue.keys():
-                return ('text', 'Invalid SAVETAG: Given tag already exists')
+                return ('text', 'Invalid TAGNAME: Given tag already exists')
 
             self.stagetag[phonenum] = tagname
             return ('text', 'Please send the content for tag: ' + tagname)
 
-        elif keyword == "updatetag":
+        elif keyword == "reset":
             keywords = messageBody.split()
             if len(keywords) != 2:
                 return ('text', 'Invalid tag')
             tagname = keywords[1]
             if tagname not in self.tagqueue.keys():
-                return ('text', 'Invalid UPDATE TAG: Given tag does not exist')
+                return ('text', 'Invalid TAG: Given tag does not exist')
 
             self.stagetag[phonenum] = tagname
             return ('text', 'Please send the content for tag: ' + tagname)
@@ -115,11 +120,6 @@ class Serve():
 
             return ret('text', 'Successfully attached to tag:' + tagname)
 
-        if jsondict['msgtype']  == 'text':
-            messagebody = jsondict['msgbody'] 
-            keyword = messagebody.split()[0].lower()
-            if keyword in self.tagqueue.keys():
-                   return ret(self.tagqueue[keyword][0], self.tagqueue[keyword][1])
 
         if jsondict['msgtype']  == 'media':
 

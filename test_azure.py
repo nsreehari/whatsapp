@@ -18,7 +18,7 @@ except:
 
 
 jsondict = {
-    "msgtype": "text", "msgbody": mymsg, "medium": "myapp", "phonenum": "919701277758"
+    "msgtype": "text", "msgbody": mymsg, "medium": "myapp", "phonenum": "919700000000"
 }
 
 msg = Message(json.dumps(jsondict))

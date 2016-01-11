@@ -37,10 +37,7 @@ class AzureConnection():
     def send(self, jsondict):
         #handles only whatsapp send messages for now
         msg = Message(json.dumps(jsondict))
-        if jsondict['medium'] == 'whatsapp':
-            Q = 'whatsapp_sender'
-        if jsondict['medium'] == 'myapp':
-            Q = 'myapp_sender'
+        Q = jsondict['medium'] + '_sender'
             
         self.bus_service.send_queue_message(Q, msg)
 
@@ -48,7 +45,8 @@ class AzureConnection():
 azureConn = AzureConnection()
 serve = Serve()
 
-while True:
+from os.path import isfile
+while not isfile('/home/bitnami1/whatsapp/.noazure'):
     receivejson = azureConn.receive()
     if receivejson != None:
         resp = serve.getResponse(receivejson)
