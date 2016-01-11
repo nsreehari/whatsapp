@@ -1,3 +1,5 @@
+#!/opt/bitnami/python/bin/python
+#-*- coding: utf-8 -*-
 
 
 import json
@@ -25,7 +27,7 @@ bus_service = ServiceBusService(
 try:
    mymsg = sys.argv[1]
 except:
-   mymsg = 'Hi, bb How are you?'
+   mymsg = 'quote'
 
 
 jsondict = {
