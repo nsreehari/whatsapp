@@ -22,6 +22,7 @@ class AzureConnection():
 
         self.bus_service.create_queue('process_incoming', queue_options)
         self.bus_service.create_queue('whatsapp_sender', queue_options)
+        self.bus_service.create_queue('myapp_sender', queue_options)
  
 
     def receive(self):
@@ -35,9 +36,13 @@ class AzureConnection():
 
     def send(self, jsondict):
         #handles only whatsapp send messages for now
+        msg = Message(json.dumps(jsondict))
         if jsondict['medium'] == 'whatsapp':
-            msg = Message(json.dumps(jsondict))
-            self.bus_service.send_queue_message('whatsapp_sender', msg)
+            Q = 'whatsapp_sender'
+        if jsondict['medium'] == 'myapp':
+            Q = 'myapp_sender'
+            
+        self.bus_service.send_queue_message(Q, msg)
 
 
 azureConn = AzureConnection()
@@ -48,7 +53,6 @@ while True:
     if receivejson != None:
         resp = serve.getResponse(receivejson)
         if resp:
-            sendjson = resp
-            azureConn.send(sendjson)
+            azureConn.send(resp)
     else:
         time.sleep(2.6)

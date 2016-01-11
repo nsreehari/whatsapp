@@ -8,14 +8,20 @@ from datetime import datetime
 import threading
 from azure.servicebus import ServiceBusService, Message, Queue
 
-from layer import SendQueue
+from layer import SendQueue, AZURE_RECEIVING
 
 logging.basicConfig(filename='/tmp/whatsapp.log', level=logging.INFO)
 crphone="919502037758"
 crpassword="GzBOxFaczlGJF83KPjwSHxnowro="
 credentials = (crphone, crpassword) # replace with your phone and password
 
+Counter = 100
+
 def watchAzureQueue():
+        global Counter
+        if AZURE_RECEIVING == False:
+            return 
+
         bus_service = ServiceBusService(
             service_namespace='msgtestsb',
             shared_access_key_name='RootManageSharedAccessKey',
@@ -27,7 +33,7 @@ def watchAzureQueue():
         bus_service.create_queue('process_incoming', queue_options)
         bus_service.create_queue('whatsapp_sender', queue_options)
  
-        if True:
+        while Counter > 1:
             msg = bus_service.receive_queue_message('whatsapp_sender', peek_lock=False)
             if msg != None and msg.body:
                 logging.info( '%s ' % datetime.now() +  msg.body)
@@ -38,19 +44,27 @@ def watchAzureQueue():
 
         
 def watchWhatsApp():
-	if True:
+        global Counter
+	while Counter > 0:
     	    logging.info( '%s' % datetime.now() +  ": Sleeping now")
             if SendQueue.empty():
     	        time.sleep(1.6)
 	    stack = YowsupEchoStack(credentials, True)
 	    stack.start()
 
+            Counter -= 1
+
+
+
 def main():
-    tasks = [watchAzureQueue, watchWhatsApp ]
-    #data = get_work_data()
-    for task in tasks:
-        #t = threading.Thread(target=task, args=())
-        #t.start()
-        task()
+    t = threading.Thread(target=watchAzureQueue, args=())
+    t.start()
+
+    watchWhatsApp()
+
+    #for i in range(0, 1000) :
+    #   watchAzureQueue()
+    #   watchWhatsApp()
+
 
 main()

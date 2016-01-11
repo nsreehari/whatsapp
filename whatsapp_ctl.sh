@@ -2,7 +2,6 @@
 
 
 
-
 OPENERP_HOME="/home/bitnami1/whatsapp/whatsapp"
 GEVENT_START="$OPENERP_HOME/run.py"
 GEVENT_PROGRAM="run.py"

@@ -2,7 +2,6 @@
 
 
 
-
 OPENERP_HOME="/home/bitnami1/whatsapp/whatsapp"
 GEVENT_START="$OPENERP_HOME/serve_azure.py"
 GEVENT_PROGRAM="serve_azure.py"

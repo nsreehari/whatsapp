@@ -17,9 +17,11 @@ TEMPDOWNLOADFILE = '/tmp/X.jpg'
 
 class Serve():
 
-    def __init__(self):
+    def __init__(self, cbfn=None):
         self.tagqueue = {}
         self.stagetag = {}
+
+        self.callbackfn = cbfn
 
         try:
         	tagsfile = open(TAGSFILE, "rb")
@@ -131,6 +133,9 @@ class Serve():
             (restype, response) = self.parsecapabilities(messagebody, phonenum)
             return ret(restype, response)
 
+    def getResponseWrapper(self, json):
+        return json.dumps(self.getResponse(json.loads(jsondict)))
+        
         
 
 

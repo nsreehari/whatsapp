@@ -4,6 +4,8 @@ from yowsup.layers.protocol_media.mediauploader import MediaUploader
 from yowsup.layers.protocol_media.mediadownloader import MediaDownloader 
 from yowsup.layers.protocol_messages.protocolentities import TextMessageProtocolEntity 
 
+AZURE_SERVICING = False
+AZURE_RECEIVING = True
 
 from serve import Serve
 import logging
@@ -32,7 +34,7 @@ class EchoLayer(YowInterfaceLayer):
         super(EchoLayer, self).__init__()
         YowInterfaceLayer.__init__(self)
         self.connected = False
-        #self.serve = Serve(self.sendMessage)
+        self.serve = Serve()
 
         self.bus_service = ServiceBusService(
             service_namespace='msgtestsb',
@@ -58,9 +60,13 @@ class EchoLayer(YowInterfaceLayer):
         if jsondict['msgtype'] == 'text':
             logging.info( recdMsg.getBody())
 
-        #self.serve.getResponse(jsondict)
-        msg = Message(json.dumps(jsondict))
-        self.bus_service.send_queue_message('process_incoming', msg)
+        pushjson = json.dumps(jsondict)
+        if AZURE_SERVICING:
+            msg = Message(pushjson)
+            self.bus_service.send_queue_message('process_incoming', msg)
+        else:
+            retjson = self.serve.getResponseWrapper(pushjson)
+            SendQueue.put(retjson)
 
         self.toLower(recdMsg.ack())
         self.toLower(recdMsg.ack(True))
