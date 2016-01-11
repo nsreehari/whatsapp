@@ -27,7 +27,7 @@ def watchAzureQueue():
         bus_service.create_queue('process_incoming', queue_options)
         bus_service.create_queue('whatsapp_sender', queue_options)
  
-        while True:
+        if True:
             msg = bus_service.receive_queue_message('whatsapp_sender', peek_lock=False)
             if msg != None and msg.body:
                 logging.info( '%s ' % datetime.now() +  msg.body)
@@ -38,7 +38,7 @@ def watchAzureQueue():
 
         
 def watchWhatsApp():
-	while True:
+	if True:
     	    logging.info( '%s' % datetime.now() +  ": Sleeping now")
             if SendQueue.empty():
     	        time.sleep(1.6)
@@ -46,10 +46,11 @@ def watchWhatsApp():
 	    stack.start()
 
 def main():
-    tasks = [watchAzureQueue , watchWhatsApp ]
+    tasks = [watchAzureQueue, watchWhatsApp ]
     #data = get_work_data()
     for task in tasks:
-        t = threading.Thread(target=task, args=())
-        t.start()
+        #t = threading.Thread(target=task, args=())
+        #t.start()
+        task()
 
 main()

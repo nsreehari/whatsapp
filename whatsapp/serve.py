@@ -7,18 +7,19 @@ import random
 import requests
 from urllib import urlretrieve
 from sys import version_info
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 TAGSFILE = '/tmp/tagsfile.pkl'
 TEMPDOWNLOADFILE = '/tmp/X.jpg'
 
+
 class Serve():
 
-    def __init__(self, cbsendmsg):
+    def __init__(self):
         self.tagqueue = {}
         self.stagetag = {}
-	self.cbSendMsg = cbsendmsg
 
         try:
         	tagsfile = open(TAGSFILE, "rb")
@@ -90,9 +91,9 @@ class Serve():
 
     def getResponse(self, jsondict):
 
+        ret = lambda a,b: {'phonenum':jsondict['phonenum'], 'medium':jsondict['medium'] ,'restype': a, 'response': b}
 
         phonenum = jsondict['phonenum']
-        ret = lambda a,b: self.cbSendMsg(phonenum, a, b)
         #logging.info( self.stagetag)
         if phonenum in self.stagetag.keys():
             tagname = self.stagetag[phonenum].lower()
@@ -129,5 +130,7 @@ class Serve():
             messagebody = jsondict['msgbody']
             (restype, response) = self.parsecapabilities(messagebody, phonenum)
             return ret(restype, response)
+
+        
 
 
