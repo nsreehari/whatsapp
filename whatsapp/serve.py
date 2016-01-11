@@ -4,6 +4,7 @@ import time
 from copy import copy
 import cPickle
 import random
+import json
 import requests
 from urllib import urlretrieve
 from sys import version_info
@@ -133,7 +134,7 @@ class Serve():
             (restype, response) = self.parsecapabilities(messagebody, phonenum)
             return ret(restype, response)
 
-    def getResponseWrapper(self, json):
+    def getResponseWrapper(self, jsondict):
         return json.dumps(self.getResponse(json.loads(jsondict)))
         
         

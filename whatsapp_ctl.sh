@@ -1,7 +1,6 @@
 #! /bin/sh
 
 
-
 OPENERP_HOME="/home/bitnami1/whatsapp/whatsapp"
 GEVENT_START="$OPENERP_HOME/run.py"
 GEVENT_PROGRAM="run.py"
@@ -32,6 +31,7 @@ is_gevent_running() {
 }
 
 start_gevent() {
+    test -f /home/bitnami1/whatsapp/.nowhatsapp && echo .nowhatsapp exists: exiting && exit
     is_gevent_running
     RUNNING=$?
     if [ $RUNNING -eq 1 ]; then

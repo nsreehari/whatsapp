@@ -32,6 +32,7 @@ is_gevent_running() {
 }
 
 start_gevent() {
+    test -f /home/bitnami1/whatsapp/.noazure && echo .noazure exists: exiting &&exit
     is_gevent_running
     RUNNING=$?
     if [ $RUNNING -eq 1 ]; then
