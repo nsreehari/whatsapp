@@ -34,7 +34,7 @@ def watchAzureQueue():
         bus_service.create_queue('process_incoming', queue_options)
         bus_service.create_queue('whatsapp_sender', queue_options)
  
-        while not isfile('/home/bitnami1/whatsapp/.nowhatsapp') and Counter > 1:
+        while not isfile('/home/bitnami1/whatsapp/.stopwhatsapp') and Counter > 1:
             msg = bus_service.receive_queue_message('whatsapp_sender', peek_lock=False)
             if msg != None and msg.body:
                 logging.info( '%s ' % datetime.now() +  msg.body)
@@ -46,7 +46,7 @@ def watchAzureQueue():
         
 def watchWhatsApp():
         global Counter
-        while not isfile('/home/bitnami1/whatsapp/.nowhatsapp') and Counter > 0:
+        while not isfile('/home/bitnami1/whatsapp/.stopwhatsapp') and Counter > 0:
     	    logging.info( '%s' % datetime.now() +  ": Sleeping now")
             if SendQueue.empty():
     	        time.sleep(1.6)
@@ -58,8 +58,9 @@ def watchWhatsApp():
 
 
 def main():
-    t = threading.Thread(target=watchAzureQueue, args=())
-    t.start()
+    if True and False:
+       t = threading.Thread(target=watchAzureQueue, args=())
+       t.start()
 
     watchWhatsApp()
 

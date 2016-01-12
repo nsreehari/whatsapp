@@ -16,14 +16,10 @@ TAGSFILE = '/tmp/tagsfile.pkl'
 TEMPDOWNLOADFILE = '/tmp/X.jpg'
 
 
-class Serve():
-
+class GetSet():
     def __init__(self, cbfn=None):
         self.tagqueue = {}
         self.stagetag = {}
-
-        self.callbackfn = cbfn
-
         try:
         	tagsfile = open(TAGSFILE, "rb")
         	self.tagqueue = cPickle.load(tagsfile)
@@ -31,47 +27,41 @@ class Serve():
         except IOError:
         	pass
 
+    def preparse(self, j, phonenum):
+      
+        if phonenum in self.stagetag.keys():
+            tagname = self.stagetag[phonenum].lower()
 
-    def downloadURL(self, url, savepath):
-        urlretrieve(url, savepath)
-        return 
+            logger.info("Attaching content for " + tagname)
+            if j['msgtype'] == 'text':
+                self.tagqueue[tagname] = ['text', j['msgbody']]
+            elif j['msgtype'] == 'media':
+              if j['mediatype'] in ['image', 'audio', 'video']:
+                self.tagqueue[tagname] = [j['mediatype'], {'mediaurl':j['mediaurl'], 'caption': j['caption']}]
+              elif j['mediatype'] in ['location']:
+                self.tagqueue[tagname] = [j['mediatype'], {'lat':j['lat'], 'long':j['long'], 'encoding':j['encoding'], 'name':j['name'], 'url':j['url']}]
+              elif j['mediatype'] in ['vcard']:
+                self.tagqueue[tagname] = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
 
+            #backup the self.tagqueue pending
+            output = open(TAGSFILE, 'wb')
+            cPickle.dump(self.tagqueue, output)
+            output.close()
 
-    def getquote(self):
+            del self.stagetag[phonenum]
 
-        quote_file = open('quotes.pkl', 'rb')
-        quotes = cPickle.load(quote_file)
-        quote_file.close()
+            return ('text', 'Successfully attached to tag:' + tagname)
+        else:
+            return None
 
-        return random.choice(quotes)
-
-    def gethelpstring(self):
-        helpstring = "I do not understand that. You can try something like 'quote' or 'img'"
-        return helpstring
-
-
-    def parsecapabilities(self, messageBody, phonenum):
-
+    def parse(self, messageBody, phonenum):
         keyword = messageBody.split()[0].lower()
-
-        if keyword.lower() == "quote":
-            return ('text', self.getquote())
-        elif keyword == "name":
-            return ('text', "Wait, I will soon have something cool")
-        elif keyword == "img":
-            try:
-                image_number = messageBody.split()[1]
-                if image_number not in ['1', '2', '3', '4', '5', '6', '7']:
-                    image_number = '1'
-            except:
-                image_number = '1'
-            return ('image', '/home/bitnami1/bhandara/website/img/t%s.jpg' % image_number )
-
-        elif keyword == "get":
+        if keyword == "get":
             keywords = messageBody.split()
             tagname = keywords[1].lower()
             if tagname in self.tagqueue.keys():
                 return (self.tagqueue[tagname][0], self.tagqueue[tagname][1])
+
         elif keyword == "set":
             keywords = messageBody.split()
             if len(keywords) != 2:
@@ -93,6 +83,57 @@ class Serve():
 
             self.stagetag[phonenum] = tagname
             return ('text', 'Please send the content for tag: ' + tagname)
+
+        return None
+
+class Serve():
+
+    def __init__(self, cbfn=None):
+
+        self.callbackfn = cbfn
+
+        self.subparsers = [ GetSet() ]
+
+
+    def downloadURL(self, url, savepath):
+        urlretrieve(url, savepath)
+        return 
+
+
+    def getquote(self):
+
+        quote_file = open('quotes.pkl', 'rb')
+        quotes = cPickle.load(quote_file)
+        quote_file.close()
+
+        return random.choice(quotes)
+
+    def gethelpstring(self):
+        helpstring = "I do not understand that. You can try something like 'quote' or 'img'"
+        return helpstring
+
+
+    def parser(self, messageBody, phonenum):
+
+        for sp in self.subparsers:
+            ret = sp.parse(messageBody, phonenum)
+            if ret:
+                return ret
+
+        keyword = messageBody.split()[0].lower()
+
+        if keyword.lower() == "quote":
+            return ('text', self.getquote())
+        elif keyword == "name":
+            return ('text', "Wait, I will soon have something cool")
+        elif keyword == "img":
+            try:
+                image_number = messageBody.split()[1]
+                if image_number not in ['1', '2', '3', '4', '5', '6', '7']:
+                    image_number = '1'
+            except:
+                image_number = '1'
+            return ('image', '/home/bitnami1/bhandara/website/img/t%s.jpg' % image_number )
         else:
             return ('text', self.gethelpstring())
 
@@ -102,26 +143,20 @@ class Serve():
         ret = lambda a,b: {'phonenum':jsondict['phonenum'], 'medium':jsondict['medium'] ,'restype': a, 'response': b}
 
         phonenum = jsondict['phonenum']
-        #logging.info( self.stagetag)
-        if phonenum in self.stagetag.keys():
-            tagname = self.stagetag[phonenum].lower()
+        #logger.info( self.stagetag)
 
-            try:
-                self.tagqueue[tagname] = ['readymade', copy(jsondict['msg'])]
-            except:
-                self.tagqueue[tagname] = ['text', jsondict['msgbody']]
+        for sp in self.subparsers:
+            ret1 = sp.preparse(jsondict, phonenum)
+            if ret1:
+                (a, b) = ret1
+                return ret(a, b)
 
-            #backup the self.tagqueue pending
-            output = open(TAGSFILE, 'wb')
-            cPickle.dump(self.tagqueue, output)
-            output.close()
+        if jsondict['msgtype'] == 'text':
+            messagebody = jsondict['msgbody']
+            (restype, response) = self.parser(messagebody, phonenum)
+            return ret(restype, response)
 
-            del self.stagetag[phonenum]
-
-            return ret('text', 'Successfully attached to tag:' + tagname)
-
-
-        if jsondict['msgtype']  == 'media':
+        if jsondict['msgtype']  == 'mediaaa':
 
             if jsondict['mediatype']  in ("image"):
                 media_url = jsondict['mediaurl'] 
@@ -132,13 +167,12 @@ class Serve():
             	return ret('text', 'saved %s' % 8)
             return ret('text', 'no media messages are handled')
 
-        if jsondict['msgtype'] == 'text':
-            messagebody = jsondict['msgbody']
-            (restype, response) = self.parsecapabilities(messagebody, phonenum)
-            return ret(restype, response)
+        return None
 
-    def getResponseWrapper(self, jsondict):
-        return json.dumps(self.getResponse(json.loads(jsondict)))
+    def getResponseWrapper(self, jsondict, recdMsg):
+        inputjson = json.loads(jsondict)
+        resp = self.getResponse(inputjson)
+        return json.dumps(resp)
         
         
 

@@ -46,7 +46,7 @@ azureConn = AzureConnection()
 serve = Serve()
 
 from os.path import isfile
-while not isfile('/home/bitnami1/whatsapp/.noazure'):
+while not isfile('/home/bitnami1/whatsapp/.stopazure'):
     receivejson = azureConn.receive()
     if receivejson != None:
         resp = serve.getResponse(receivejson)

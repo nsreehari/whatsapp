@@ -1,5 +1,5 @@
 from yowsup.layers.interface                           import YowInterfaceLayer, ProtocolEntityCallback
-from yowsup.layers.protocol_media.protocolentities import RequestUploadIqProtocolEntity, ImageDownloadableMediaMessageProtocolEntity, AudioDownloadableMediaMessageProtocolEntity
+from yowsup.layers.protocol_media.protocolentities import RequestUploadIqProtocolEntity, ImageDownloadableMediaMessageProtocolEntity, AudioDownloadableMediaMessageProtocolEntity, LocationMediaMessageProtocolEntity, VCardMediaMessageProtocolEntity
 from yowsup.layers.protocol_media.mediauploader import MediaUploader 
 from yowsup.layers.protocol_media.mediadownloader import MediaDownloader 
 from yowsup.layers.protocol_messages.protocolentities import TextMessageProtocolEntity 
@@ -10,7 +10,7 @@ AZURE_RECEIVING = True
 from serve import Serve
 import logging
 import time
-from copy import copy
+from copy import copy, deepcopy
 import cPickle
 import random
 import requests
@@ -18,7 +18,8 @@ from urllib import urlretrieve
 from sys import version_info
 import json
 from datetime import datetime
-
+from os import unlink
+from os.path import isfile
 logger = logging.getLogger(__name__)
 
 from azure.servicebus import ServiceBusService, Message
@@ -52,8 +53,19 @@ class EchoLayer(YowInterfaceLayer):
         
         if jsondict['msgtype'] == 'media':
             jsondict['mediatype'] = recdMsg.getMediaType()
+
             if jsondict['mediatype'] in ["image", "audio", "video"]:
                 jsondict['mediaurl'] = recdMsg.getMediaUrl()
+                jsondict['caption'] = recdMsg.getMediaUrl()
+            elif jsondict['mediatype'] == 'vcard':
+                jsondict['name'] = recdMsg.getName()
+                jsondict['carddata'] = recdMsg.getCardData()
+            elif jsondict['mediatype'] == "location":
+                jsondict['lat'] = recdMsg.getLatitude() 
+                jsondict['long'] = recdMsg.getLongitude()
+                jsondict['name'] = recdMsg.getLocationName()
+                jsondict['url'] = recdMsg.getLocationURL()
+                jsondict['encoding'] = "raw"
 
         
         if jsondict['msgtype'] == 'text':
@@ -64,9 +76,9 @@ class EchoLayer(YowInterfaceLayer):
             msg = Message(pushjson)
             self.bus_service.send_queue_message('process_incoming', msg)
         else:
-            jsondict['msg'] = recdMsg # pass whole message for backup just in case:)
-            retjson = self.serve.getResponseWrapper(pushjson)
-            SendQueue.put(retjson)
+            retjson = self.serve.getResponseWrapper(pushjson, recdMsg)
+            if retjson:
+                SendQueue.put(retjson)
 
         self.toLower(recdMsg.ack())
         self.toLower(recdMsg.ack(True))
@@ -85,15 +97,26 @@ class EchoLayer(YowInterfaceLayer):
             response = jsondict['response']
          
             logging.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
-            if restype == 'image':
-                self.image_send(phonenum, response)
-         
+            if restype in [ 'image' , 'audio', 'video' ]:
+                if 'localfile' in response.keys():
+                     path = response['localfile']
+                else:
+                     path = '/tmp/XdownLoaddd'
+                     if isfile(path):
+                         unlink(path)
+                     mediaurl = response['mediaurl']
+                     urlretrieve(mediaurl, path)
+                if isfile(path):
+                    self.media_send(phonenum, path, restype, response['caption'])
             elif restype == 'text':
                 self.message_send(phonenum, response)
+            elif restype == 'vcard':
+                self.vcard_send(phonenum, response['name'],response['carddata'])
+            elif restype == 'location':
+                self.location_send(phonenum, response['lat'],response['long'],
+                       response['name'], response['url'], response['encoding'])
          
-            elif restype == 'readymade':
-                self.logResponse(response)
-                self.toLower(response.forward(phonenum))
+         
 
             # handling completed queue in azure service not yet implemented
             #CompletedSendQueue.append(key[1])
@@ -109,8 +132,8 @@ class EchoLayer(YowInterfaceLayer):
         if msg.getType() == 'text':
                 logging.info(("Echoing %s to %s" % (msg.getBody(), msg.getFrom(False))))
         elif msg.getType() == 'media':
-            if msg.getMediaType() == "image":
-                logging.info(("Echoing image %s to %s" % (msg.url, msg.getFrom(False))))
+            if msg.getMediaType() in [ "image", "audio", "video"]:
+                logging.info(("Echoing %s %s to %s" % (msg.getMediaType(),  msg.url, msg.getFrom(False))))
             
             elif msg.getMediaType() == "location":
                 logging.info(("Echoing location (%s, %s) to %s" % (msg.getLatitude(), msg.getLongitude(), msg.getFrom(False))))
@@ -135,13 +158,31 @@ class EchoLayer(YowInterfaceLayer):
             outgoingMessage = TextMessageProtocolEntity(content.encode("utf-8") if version_info >= (3,0) else content, to = self.normalizeJid(number))
             self.toLower(outgoingMessage)
 
-    def image_send(self, number, path, caption = None):
+    def vcard_send(self, number, name, carddata):
+            outgoingMessage = VCardMediaMessageProtocolEntity(
+                                name, carddata, to = self.normalizeJid(number))
+            self.toLower(outgoingMessage)
+
+    def location_send(self, number, lat, lon, name, url, encoding):
+            outgoingMessage = LocationMediaMessageProtocolEntity(
+                 lat, lon, name, url, encoding, to = self.normalizeJid(number))
+            self.toLower(outgoingMessage)
+
+    def media_send(self, number, path, mediatype,  caption = None):
             jid = self.normalizeJid(number)
-            entity = RequestUploadIqProtocolEntity(RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE, filePath=path)
+            if mediatype == 'audio':
+                emt = RequestUploadIqProtocolEntity.MEDIA_TYPE_AUDIO
+            elif mediatype == 'video':
+                emt = RequestUploadIqProtocolEntity.MEDIA_TYPE_VIDEO
+            elif mediatype == 'image':
+                emt = RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE
+
+            entity = RequestUploadIqProtocolEntity(emt, filePath=path)
             successFn = lambda successEntity, originalEntity: self.onRequestUploadResult(jid, path, successEntity, originalEntity, caption)
             errorFn = lambda errorEntity, originalEntity: self.onRequestUploadError(jid, path, errorEntity, originalEntity)
 
             self._sendIq(entity, successFn, errorFn)
+
 
 
 
@@ -159,8 +200,10 @@ class EchoLayer(YowInterfaceLayer):
 
         if requestUploadIqProtocolEntity.mediaType == RequestUploadIqProtocolEntity.MEDIA_TYPE_AUDIO:
             doSendFn = self.doSendAudio
-        else:
+        elif requestUploadIqProtocolEntity.mediaType == RequestUploadIqProtocolEntity.MEDIA_TYPE_IMAGE:
             doSendFn = self.doSendImage
+        else:
+            doSendFn = self.doSendVideo
 
         if resultRequestUploadIqProtocolEntity.isDuplicate():
             doSendFn(filePath, resultRequestUploadIqProtocolEntity.getUrl(), jid,
@@ -184,6 +227,9 @@ class EchoLayer(YowInterfaceLayer):
         #sys.stdout.write("%s => %s, %d%% \r" % (os.path.basename(filePath), jid, progress))
         #sys.stdout.flush()
 
+    def doSendVideo(self, filePath, url, to, ip = None, caption = None):
+        entity = VideoDownloadableMediaMessageProtocolEntity.fromFilePath(filePath, url, ip, to, caption = caption)
+        self.toLower(entity)
 
     def doSendImage(self, filePath, url, to, ip = None, caption = None):
         entity = ImageDownloadableMediaMessageProtocolEntity.fromFilePath(filePath, url, ip, to, caption = caption)
