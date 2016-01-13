@@ -10,22 +10,31 @@ from urllib import urlretrieve
 from sys import version_info
 from datetime import datetime
 from os.path import isfile, basename
+from subprocess import call
 
 logger = logging.getLogger(__name__)
 
 
 
 class GetSet():
-    TAGSFILE = '/tmp/tagsfile.pkl'
+    TAGSFILE = '/tmp/serve/tags_getset.pkl'
     def __init__(self, cbfn=None):
-        self.tagqueue = {}
         self.stagetag = {}
+        self.topickle = { 'tags': {} }
+
         try:
-                tagsfile = open(self.TAGSFILE, "rb")
-                self.tagqueue = cPickle.load(tagsfile)
-                tagsfile.close()
+            tagsfile = open(self.TAGSFILE, "rb")
+            self.topickle = cPickle.load(tagsfile)
+            tagsfile.close()
         except IOError:
-                pass
+            pass
+
+        self.tagqueue = self.topickle['tags']
+
+    def flushpickle(self):
+        output = open(self.TAGSFILE, 'wb')
+        cPickle.dump(self.topickle, output)
+        output.close()
 
     def preparse(self, j, phonenum):
       
@@ -39,7 +48,7 @@ class GetSet():
             elif j['msgtype'] == 'media':
               if j['mediatype'] in ['image', 'audio', 'video']:
                 url = j['mediaurl']
-                savepath = '/tmp/repo_' + basename(mediaurl)
+                savepath = '/tmp/serve/repo_' + basename(mediaurl)
                 urlretrieve(url, savepath)
                 if isfile(savepath):
                     stt = [j['mediatype'], {'localfile':savepath, 'caption': j['caption']}]
@@ -58,10 +67,8 @@ class GetSet():
             else: 
                 self.tagqueue[tagname] = [ stt ]
 
-            #backup the self.tagqueue pending
-            output = open(self.TAGSFILE, 'wb')
-            cPickle.dump(self.tagqueue, output)
-            output.close()
+            #flush the self.tagqueue to disk
+            self.flushpickle()
 
             del self.stagetag[phonenum]
 
@@ -116,6 +123,8 @@ class Serve():
 
     def __init__(self, cbfn=None):
 
+                
+        call("mkdir -p /tmp/serve".split())
         self.callbackfn = cbfn
 
         self.subparsers = [ GetSet() ]
@@ -189,7 +198,6 @@ class Serve():
                 TEMPDOWNLOADFILE = '/tmp/X.jpg'
                 savepath = TEMPDOWNLOADFILE
                 self.downloadURL( media_url, savepath)
-                from subprocess import call
                 call(["/home/bitnami1/bhandara/gitpush.script"])
                 return ret('text', 'saved %s' % 8)
             return ret('text', 'no media messages are handled')
