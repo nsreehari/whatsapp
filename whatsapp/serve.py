@@ -9,6 +9,7 @@ import requests
 from urllib import urlretrieve
 from sys import version_info
 from datetime import datetime
+from os.path import isfile, basename
 
 logger = logging.getLogger(__name__)
 
@@ -32,16 +33,31 @@ class GetSet():
         if phonenum in self.stagetag.keys():
             tagname = self.stagetag[phonenum].lower()
 
+
             logger.info("Attaching content for " + tagname)
             if j['msgtype'] == 'text':
-                self.tagqueue[tagname] = ['text', j['msgbody']]
+                stt = ['text', j['msgbody']]
             elif j['msgtype'] == 'media':
               if j['mediatype'] in ['image', 'audio', 'video']:
-                self.tagqueue[tagname] = [j['mediatype'], {'mediaurl':j['mediaurl'], 'caption': j['caption']}]
+                url = j['mediaurl']
+                savepath = '/tmp/repo_' + basename(mediaurl)
+                urlretrieve(url, savepath)
+                if isfile(savepath):
+                    stt = [j['mediatype'], {'localfile':savepath, 'caption': j['caption']}]
+                else:
+                    stt = [j['mediatype'], {'mediaurl':j['mediaurl'], 'caption': j['caption']}]
               elif j['mediatype'] in ['location']:
-                self.tagqueue[tagname] = [j['mediatype'], {'lat':j['lat'], 'long':j['long'], 'encoding':j['encoding'], 'name':j['name'], 'url':j['url']}]
+                stt = [j['mediatype'], {'lat':j['lat'], 'long':j['long'], 'encoding':j['encoding'], 'name':j['name'], 'url':j['url']}]
               elif j['mediatype'] in ['vcard']:
-                self.tagqueue[tagname] = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
+                stt = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
+            if tagname.startswith("append__"):
+                tagname = tagname[8:]
+                if tagname in self.tagqueue.keys():
+                    self.tagqueue[tagname].append(stt)
+                else:
+                    self.tagqueue[tagname] = [ stt ]
+            else: 
+                self.tagqueue[tagname] = [ stt ]
 
             #backup the self.tagqueue pending
             output = open(TAGSFILE, 'wb')
@@ -60,7 +76,7 @@ class GetSet():
             keywords = messageBody.split()
             tagname = keywords[1].lower()
             if tagname in self.tagqueue.keys():
-                return (self.tagqueue[tagname][0], self.tagqueue[tagname][1])
+                return ('list', self.tagqueue[tagname])
 
         elif keyword == "set":
             keywords = messageBody.split()
@@ -68,9 +84,20 @@ class GetSet():
                 return ('text', 'Invalid TAGNAME')
             tagname = keywords[1]
             if tagname in self.tagqueue.keys():
-                return ('text', 'Invalid TAGNAME: Given tag already exists')
+                return ('text', 'Invalid TAGNAME: Given tag already exists -- Use APPEND TAGNAME to attach the content to and existing tag or RESET TAGNAME to reset existing tag')
 
             self.stagetag[phonenum] = tagname
+            return ('text', 'Please send the content for tag: ' + tagname)
+
+        elif keyword == "append":
+            keywords = messageBody.split()
+            if len(keywords) != 2:
+                return ('text', 'Invalid TAGNAME')
+            tagname = keywords[1]
+            if tagname not in self.tagqueue.keys():
+                return ('text', 'Invalid TAGNAME: Given tag doesn"t exist')
+
+            self.stagetag[phonenum] = "append__" + tagname
             return ('text', 'Please send the content for tag: ' + tagname)
 
         elif keyword == "reset":

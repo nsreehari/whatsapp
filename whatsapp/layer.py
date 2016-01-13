@@ -96,11 +96,16 @@ class EchoLayer(YowInterfaceLayer):
             
             jsondict = json.loads(sendmsg)
             phonenum = jsondict['phonenum']
-            restype = jsondict['restype']
-            response = jsondict['response']
+            if jsondict['restype'] == 'list':
+                ret = jsondict['response']
+            else:
+                ret = [(jsondict['restype'], jsondict['response'])]
+ 
+
+            for (restype,response) in ret: 
          
-            logging.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
-            if restype in [ 'image' , 'audio', 'video' ]:
+              logging.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
+              if restype in [ 'image' , 'audio', 'video' ]:
                 if 'localfile' in response.keys():
                      path = response['localfile']
                 else:
@@ -123,18 +128,16 @@ class EchoLayer(YowInterfaceLayer):
                     # video not supported yet
                     self.message_send(phonenum, "Audio Message not supported yet")
 
-            elif restype == 'text':
+              elif restype == 'text':
                 self.message_send(phonenum, response)
-            elif restype == 'vcard':
+              elif restype == 'vcard':
                 self.vcard_send(phonenum, response['name'],response['carddata'])
-            elif restype == 'location':
+              elif restype == 'location':
                 self.location_send(phonenum, response['lat'],response['long'],
                        response['name'], response['url'], response['encoding'])
-         
-         
 
-            # handling completed queue in azure service not yet implemented
-            #CompletedSendQueue.append(key[1])
+              # handling completed queue in azure service not yet implemented
+              #CompletedSendQueue.append(key[1])
 
     @ProtocolEntityCallback("receipt")
     def onReceipt(self, entity):

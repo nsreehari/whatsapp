@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 
 
-
+from copy import deepcopy
 import json
 from serve import *
 from azure.servicebus import ServiceBusService, Message, Queue
@@ -51,6 +51,13 @@ while not isfile('/home/bitnami1/whatsapp/.stopazure'):
     if receivejson != None:
         resp = serve.getResponse(receivejson)
         if resp:
-            azureConn.send(resp)
+            if resp['restype'] == 'list':
+                respc = deepcopy(resp)
+                for (typ, val) in resp['response']:
+                   respc['restype'] = typ
+                   respc['response'] = val
+                   azureConn.send(respc)
+            else:
+                azureConn.send(resp)
     else:
         time.sleep(2.6)
