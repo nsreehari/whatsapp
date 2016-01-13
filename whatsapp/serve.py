@@ -14,11 +14,29 @@ from subprocess import call
 
 logger = logging.getLogger(__name__)
 
-
+def stitchmessage(j, phonenum, tagname):
+     logger.info("Attaching content for " + tagname)
+     if j['msgtype'] == 'text':
+         stt = ['text', j['msgbody']]
+     elif j['msgtype'] == 'media':
+       if j['mediatype'] in ['image', 'audio', 'video']:
+         url = j['mediaurl']
+         savepath = '/tmp/serve/repo_' + basename(mediaurl)
+         urlretrieve(url, savepath)
+         if isfile(savepath):
+             stt = [j['mediatype'], {'localfile':savepath, 'caption': j['caption']}]
+         else:
+             stt = [j['mediatype'], {'mediaurl':j['mediaurl'], 'caption': j['caption']}]
+       elif j['mediatype'] in ['location']:
+         stt = [j['mediatype'], {'lat':j['lat'], 'long':j['long'], 'encoding':j['encoding'], 'name':j['name'], 'url':j['url']}]
+       elif j['mediatype'] in ['vcard']:
+         stt = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
+ 
+       return stt
 
 class GetSet():
-    TAGSFILE = '/tmp/serve/tags_getset.pkl'
     def __init__(self, cbfn=None):
+        self.TAGSFILE = '/tmp/serve/tags_getset.pkl'
         self.stagetag = {}
         self.topickle = { 'tags': {} }
 
@@ -41,23 +59,7 @@ class GetSet():
         if phonenum in self.stagetag.keys():
             tagname = self.stagetag[phonenum].lower()
 
-
-            logger.info("Attaching content for " + tagname)
-            if j['msgtype'] == 'text':
-                stt = ['text', j['msgbody']]
-            elif j['msgtype'] == 'media':
-              if j['mediatype'] in ['image', 'audio', 'video']:
-                url = j['mediaurl']
-                savepath = '/tmp/serve/repo_' + basename(mediaurl)
-                urlretrieve(url, savepath)
-                if isfile(savepath):
-                    stt = [j['mediatype'], {'localfile':savepath, 'caption': j['caption']}]
-                else:
-                    stt = [j['mediatype'], {'mediaurl':j['mediaurl'], 'caption': j['caption']}]
-              elif j['mediatype'] in ['location']:
-                stt = [j['mediatype'], {'lat':j['lat'], 'long':j['long'], 'encoding':j['encoding'], 'name':j['name'], 'url':j['url']}]
-              elif j['mediatype'] in ['vcard']:
-                stt = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
+            stt = stitchmessage(j, phonenum, tagname)
             if tagname.startswith("append__"):
                 tagname = tagname[8:]
                 if tagname in self.tagqueue.keys():
@@ -118,6 +120,9 @@ class GetSet():
             return ('text', 'Please send the content for tag: ' + tagname)
 
         return None
+
+
+
 
 class Serve():
 
