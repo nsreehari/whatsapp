@@ -13,20 +13,19 @@ from os.path import isfile, basename
 
 logger = logging.getLogger(__name__)
 
-TAGSFILE = '/tmp/tagsfile.pkl'
-TEMPDOWNLOADFILE = '/tmp/X.jpg'
 
 
 class GetSet():
+    TAGSFILE = '/tmp/tagsfile.pkl'
     def __init__(self, cbfn=None):
         self.tagqueue = {}
         self.stagetag = {}
         try:
-        	tagsfile = open(TAGSFILE, "rb")
-        	self.tagqueue = cPickle.load(tagsfile)
-        	tagsfile.close()
+                tagsfile = open(self.TAGSFILE, "rb")
+                self.tagqueue = cPickle.load(tagsfile)
+                tagsfile.close()
         except IOError:
-        	pass
+                pass
 
     def preparse(self, j, phonenum):
       
@@ -60,7 +59,7 @@ class GetSet():
                 self.tagqueue[tagname] = [ stt ]
 
             #backup the self.tagqueue pending
-            output = open(TAGSFILE, 'wb')
+            output = open(self.TAGSFILE, 'wb')
             cPickle.dump(self.tagqueue, output)
             output.close()
 
@@ -187,11 +186,12 @@ class Serve():
 
             if jsondict['mediatype']  in ("image"):
                 media_url = jsondict['mediaurl'] 
+                TEMPDOWNLOADFILE = '/tmp/X.jpg'
                 savepath = TEMPDOWNLOADFILE
                 self.downloadURL( media_url, savepath)
-		from subprocess import call
+                from subprocess import call
                 call(["/home/bitnami1/bhandara/gitpush.script"])
-            	return ret('text', 'saved %s' % 8)
+                return ret('text', 'saved %s' % 8)
             return ret('text', 'no media messages are handled')
 
         return None

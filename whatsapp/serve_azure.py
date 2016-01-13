@@ -35,8 +35,9 @@ class AzureConnection():
                 return None
 
     def send(self, jsondict):
-        #handles only whatsapp send messages for now
-        msg = Message(json.dumps(jsondict))
+        t = json.dumps(jsondict)
+        msg = Message(t)
+        logging.info( '%s ' % datetime.now() + t)
         Q = jsondict['medium'] + '_sender'
             
         self.bus_service.send_queue_message(Q, msg)

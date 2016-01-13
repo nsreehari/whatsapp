@@ -47,10 +47,10 @@ def main(mymsg):
 
 try:
        mymsg = sys.argv[1]
+       main(mymsg)
 except:
        mymsg = 'quote'
        print mymsg
        send(mymsg)
        receive()
 
-main(mymsg)
