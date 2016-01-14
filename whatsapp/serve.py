@@ -22,7 +22,7 @@ def stitchmessage(j, phonenum, tagname):
      elif j['msgtype'] == 'media':
        if j['mediatype'] in ['image', 'audio', 'video']:
          url = j['mediaurl']
-         savepath = '/tmp/serve/repo_' + basename(mediaurl)
+         savepath = '/tmp/serve/repo_' + basename(url)
          urlretrieve(url, savepath)
          if isfile(savepath):
              stt = [j['mediatype'], {'localfile':savepath, 'caption': j['caption']}]
@@ -63,6 +63,7 @@ class GetSet():
             tagname = self.stagetag[phonenum].lower()
 
             stt = stitchmessage(j, phonenum, tagname)
+            logger.info(stt)
             if tagname.startswith("append__"):
                 tagname = tagname[8:]
                 if tagname in self.tagqueue.keys():
@@ -215,7 +216,10 @@ class Serve():
     def getResponseWrapper(self, jsondict, recdMsg):
         inputjson = json.loads(jsondict)
         resp = self.getResponse(inputjson)
-        return json.dumps(resp)
+        if resp:
+            return json.dumps(resp)
+        else:
+            return None
         
         
 
