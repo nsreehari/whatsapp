@@ -5,7 +5,7 @@ from copy import copy
 import cPickle
 import random
 import json
-import requests
+#import requests
 from urllib import urlretrieve
 from sys import version_info
 from datetime import datetime
@@ -18,6 +18,7 @@ def stitchmessage(j, phonenum, tagname):
      logger.info("Attaching content for " + tagname)
      if j['msgtype'] == 'text':
          stt = ['text', j['msgbody']]
+         return stt
      elif j['msgtype'] == 'media':
        if j['mediatype'] in ['image', 'audio', 'video']:
          url = j['mediaurl']
@@ -25,14 +26,16 @@ def stitchmessage(j, phonenum, tagname):
          urlretrieve(url, savepath)
          if isfile(savepath):
              stt = [j['mediatype'], {'localfile':savepath, 'caption': j['caption']}]
+             return stt
          else:
              stt = [j['mediatype'], {'mediaurl':j['mediaurl'], 'caption': j['caption']}]
+             return stt
        elif j['mediatype'] in ['location']:
          stt = [j['mediatype'], {'lat':j['lat'], 'long':j['long'], 'encoding':j['encoding'], 'name':j['name'], 'url':j['url']}]
+         return stt
        elif j['mediatype'] in ['vcard']:
          stt = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
- 
-       return stt
+         return stt
 
 class GetSet():
     def __init__(self, cbfn=None):

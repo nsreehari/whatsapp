@@ -26,6 +26,6 @@ while True:
                    respc['response'] = val
                    print respc
             else:
-               print resp
+                print resp
     else:
-        time.sleep(2.6)
+        time.sleep(0.1)
