@@ -8,6 +8,7 @@ from datetime import datetime
 import threading
 from azure.servicebus import ServiceBusService, Message, Queue
 from os.path import isfile
+from os import unlink
 
 from layer import SendQueue, AZURE_RECEIVING
 
@@ -70,3 +71,7 @@ def main():
 
 
 main()
+try:
+    unlink('/home/bitnami1/whatsapp/.stopwhatsapp') 
+except:
+    pass

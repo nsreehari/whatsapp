@@ -46,7 +46,9 @@ class AzureConnection():
 azureConn = AzureConnection()
 serve = Serve()
 
+from os import unlink
 from os.path import isfile
+
 while not isfile('/home/bitnami1/whatsapp/.stopazure'):
     receivejson = azureConn.receive()
     if receivejson != None:
@@ -62,3 +64,8 @@ while not isfile('/home/bitnami1/whatsapp/.stopazure'):
                 azureConn.send(resp)
     else:
         time.sleep(2.6)
+
+try:
+    unlink('/home/bitnami1/whatsapp/.stopazure')
+except:
+    pass
