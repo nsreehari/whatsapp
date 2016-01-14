@@ -1,7 +1,7 @@
 
 import logging
 import time
-from copy import copy
+from copy import copy, deepcopy
 import cPickle
 import random
 import json
@@ -36,6 +36,148 @@ def stitchmessage(j, phonenum, tagname):
        elif j['mediatype'] in ['vcard']:
          stt = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
          return stt
+
+class Sites():
+    def __init__(self, cbfn=None):
+        self.TAGSFILE = '/tmp/serve/tags_sites.pkl'
+        self.stagetag = {}
+        self.sitestructure = lambda phonenum: { 'tags': {}, 'phones':[phonenum] }
+        self.topickle = {'sites': {}}
+
+        try:
+            tagsfile = open(self.TAGSFILE, "rb")
+            self.topickle = cPickle.load(tagsfile)
+            tagsfile.close()
+        except IOError:
+            pass
+
+        self.sites = self.topickle['sites']
+
+    def flushpickle(self):
+        output = open(self.TAGSFILE, 'wb')
+        cPickle.dump(self.topickle, output)
+        output.close()
+
+    def preparse(self, j, phonenum):
+      
+        if phonenum in self.stagetag.keys():
+            (cmd, site, tagname) = self.stagetag[phonenum]
+
+            stt = stitchmessage(j, phonenum, tagname)
+            siteStruct = self.sites[site]
+            siteTags = siteStruct['tags']
+            siteAllow = siteStruct['phones']
+
+            if cmd == "append":
+                if tagname in siteTags.keys():
+                    siteTags[tagname].append(stt)
+                    rettext = 'Successfully appended to tag:' + tagname
+                else:
+                    siteTags[tagname] = [ stt ]
+                    rettext = 'Successfully attached to tag:' + tagname
+            else: 
+                siteTags[tagname] = [ stt ]
+                rettext = 'Successfully attached to tag:' + tagname
+
+            #flush the siteTags to disk
+            self.flushpickle()
+
+            del self.stagetag[phonenum]
+
+            return ('text', rettext)
+        else:
+            return None
+
+    def parse(self, messageBody, phonenum):
+        keywords = map(lambda i: i.lower(), messageBody.split())
+        allSites = self.sites
+        if "newsite" == keywords[0]:
+            if len(keywords) != 2: 
+                return ('text', 'Invalid SITENAME')
+            sitename = keywords[1]
+            if sitename in allSites.keys():
+                return ('text', 'Invalid SITE NAME: Given site already exists -- Choose a different site')
+
+            allSites[sitename] = self.sitestructure( phonenum )
+            self.flushpickle()
+            return ('text', 'Site %s created. Send %s SET TAGNAME to start a tag for this site' % (sitename, '@'+sitename))
+
+        elif "getsites" == keywords[0]:
+            sitestr = ' '.join(map(lambda s: '@%s' % s, allSites.keys()))
+            if sitestr:
+                return ('text', "Try 'SITE help' -- Existing Sites: " + sitestr)
+            else:
+                return ('text', 'No Sites exist: Create one using "newsite SITENAME"')
+
+        for s in allSites.keys():
+            #check within each site now
+            sitekey = '@%s' % s 
+            if sitekey in keywords:
+                # found @site in the given message i.e. keywords[]
+                kw = copy(keywords)
+                kw.remove(sitekey)
+                siteStruct = allSites[s]
+                siteTags = siteStruct['tags']
+                siteAllow = siteStruct['phones']
+
+                def defretstr(msg='', sk=sitekey, st=siteTags):
+                    if st:
+                        retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
+                    else:
+                        retstr = 'No Tags exist for %s - Setup something using %s set TAGNAME' % (sk, sk)
+                    return ('text', retstr)
+
+                if 'allow' in kw:
+                    if phonenum not in siteAllow:
+                        return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number' % (sitekey, sitekey, phonenum))
+                    try:
+                      if len(kw) == 2:
+                        tagname = int(kw[1])
+                        siteAllow.append(tagname)
+                        self.flushpickle()
+                        return ('text', 'Successfully allowed %s for site %s' %(tagname, sitekey))
+                      elif len(kw) == 1:
+                        return ('text', 'Allowed phone numbers for site %s are %s' %(sitekey, siteAllow))
+                      else:
+                        return ('text', 'Invalid command/phone. To allow a phone, Send %s ALLOW PHONE from the original phone number' % (sitekey))
+                    except:
+                        return ('text', 'Invalid command. To allow a phone, Send %s ALLOW PHONE from the original phone number' % (sitekey))
+
+                if 'set' in kw or 'reset' in kw or 'append' in kw :
+                    if phonenum not in siteAllow:
+                        return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number' % (sitekey, sitekey, phonenum))
+                    if len(kw) != 2: 
+                        return ('text', 'Invalid TAGNAME')
+                    tagname = kw[1]
+
+                    if 'set' in kw and tagname in siteTags.keys(): 
+                        return ('text', 'Invalid TAGNAME: Given tag already exists for the site %s -- Use %s APPEND TAGNAME to attach the content to and existing tag or  %s RESET TAGNAME to reset existing tag' % (sitekey, sitekey, sitekey) )
+                    if ('reset' in kw or 'append' in kw) and tagname not in siteTags.keys(): 
+                        return ('text', 'Invalid TAGNAME: Given tag doesn not exist for the site %s -- Use %s SET TAGNAME set existing tag' % (sitekey, sitekey) )
+
+                    if 'append' in kw:
+                        self.stagetag[phonenum] = ('append', s, tagname)
+                    elif 'set' in kw or 'reset' in kw:
+                        self.stagetag[phonenum] = ('update', s, tagname)
+
+                    return ('text', 'Please send the content for %s tag: %s' % (sitekey, tagname))
+                elif len(kw) < 1 or 'help' == kw[0]:
+                    return defretstr()
+                elif 'adminhelp' == kw[0]:
+                    return ('list', [('text', '%s set/reset/append TAG -- for updating a tag ' % (sitekey)), ('text', '%s allow PHONENUMBER -- for allowing another phone for updates') 
+                        ] )
+                else:
+                    # Here is the real search for a given TAG
+                    tagname = kw[0]
+                    if tagname in siteTags.keys():
+                        return ('list', siteTags[tagname])
+                    else:
+                        return defretstr(msg="Invalid tag! ")
+
+                return defretstr()
+
+        return None
+
 
 class GetSet():
     def __init__(self, cbfn=None):
@@ -127,22 +269,7 @@ class GetSet():
 
 
 
-
-class Serve():
-
-    def __init__(self, cbfn=None):
-
-                
-        call("mkdir -p /tmp/serve".split())
-        self.callbackfn = cbfn
-
-        self.subparsers = [ GetSet() ]
-
-
-    def downloadURL(self, url, savepath):
-        urlretrieve(url, savepath)
-        return 
-
+class Default():
 
     def getquote(self):
 
@@ -153,17 +280,24 @@ class Serve():
         return random.choice(quotes)
 
     def gethelpstring(self):
-        helpstring = "I do not understand that. You can try something like 'quote' or 'img'"
+        helpstring = "I do not understand that. You can try something like 'quote' or 'getsites' or 'newsite'"
         return helpstring
 
+    def preparse(self, jsondict, phonenum):
 
-    def parser(self, messageBody, phonenum):
+        if jsondict['msgtype']  == 'mediaaa':
 
-        for sp in self.subparsers:
-            ret = sp.parse(messageBody, phonenum)
-            if ret:
-                return ret
+            if jsondict['mediatype']  in ("image"):
+                media_url = jsondict['mediaurl'] 
+                TEMPDOWNLOADFILE = '/tmp/X.jpg'
+                savepath = TEMPDOWNLOADFILE
+                urlretrieve( media_url, savepath)
+                call(["/home/bitnami1/bhandara/gitpush.script"])
+                return ret('text', 'saved %s' % 8)
+            return ret('text', 'no media messages are handled')
+        return None
 
+    def parse(self, messageBody, phonenum):
         keyword = messageBody.split()[0].lower()
 
         if keyword.lower() == "quote":
@@ -181,6 +315,15 @@ class Serve():
         else:
             return ('text', self.gethelpstring())
 
+class Serve():
+
+    def __init__(self, cbfn=None):
+
+                
+        call("mkdir -p /tmp/serve".split())
+
+        self.subparsers = [ Sites(), GetSet(), Default() ]
+
 
     def getResponse(self, jsondict):
 
@@ -195,21 +338,14 @@ class Serve():
                 (a, b) = ret1
                 return ret(a, b)
 
-        if jsondict['msgtype'] == 'text':
-            messagebody = jsondict['msgbody']
-            (restype, response) = self.parser(messagebody, phonenum)
-            return ret(restype, response)
+        if jsondict['msgtype'] != 'text':
+            return None
 
-        if jsondict['msgtype']  == 'mediaaa':
-
-            if jsondict['mediatype']  in ("image"):
-                media_url = jsondict['mediaurl'] 
-                TEMPDOWNLOADFILE = '/tmp/X.jpg'
-                savepath = TEMPDOWNLOADFILE
-                self.downloadURL( media_url, savepath)
-                call(["/home/bitnami1/bhandara/gitpush.script"])
-                return ret('text', 'saved %s' % 8)
-            return ret('text', 'no media messages are handled')
+        for sp in self.subparsers:
+            ret1 = sp.parse(jsondict['msgbody'], phonenum)
+            if ret1:
+                (restype, response) = ret1
+                return ret(restype, response)
 
         return None
 
