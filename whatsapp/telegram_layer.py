@@ -26,11 +26,12 @@ from os import unlink
 from os.path import isfile, basename
 from copy import copy, deepcopy
 
-from Queue import Queue
+from azure.storage.blob import BlobService
+from mimetypes import guess_type
+
 from serve import Serve
 
 
-SendQueue = Queue()
 serve1 = Serve()
 
 # Enable logging
@@ -39,6 +40,37 @@ logging.basicConfig(
         level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+
+ACCOUNT = 'msgtest'
+CONTAINER = 'telegram'
+
+blob_service = BlobService(account_name='msgtest', account_key='sJQjZXgR/IUH4o4/CmbXue3DGxRgwkzy0SILxJMSgmd26lFCXUdqrtwwjmEPU9CrcIvoJG3yv6L0R55o9BqnXw==')
+
+blob_service.create_container(CONTAINER, x_ms_blob_public_access='container')
+
+
+def uploadblob(fileidshort, mediaurl):
+    global ACCOUNT
+    fileid = fileidshort + basename(mediaurl)
+    tmppath = '/tmp/' + fileid
+    urlretrieve(mediaurl, tmppath)
+    blob_service.put_block_blob_from_path(
+        CONTAINER,
+        fileid,
+        tmppath,
+        x_ms_blob_content_type=guess_type(tmppath)
+    )
+    return 'https://%s.blob.core.windows.net/%s/%s' %(ACCOUNT, CONTAINER, fileid)
+
+
+
+def downloadblob (fileid, filename): 
+    blob_service.get_blob_to_path(
+        CONTAINER,
+        fileid,
+        filename
+    )
 
 
 # Define a few command handlers. These usually take the two arguments bot and
@@ -76,7 +108,7 @@ def sendMessage(bot, sendmsg):
 
                 if isfile(path):
                   if restype == 'image':
-                    self.image_send(phonenum, path, response['caption'])
+                    M = bot.sendPhoto(phonenum, photo=path)
                   if restype == 'video':
                     #  self.video_send(phonenum, path, response['caption'])
                     # video not supported yet
@@ -107,10 +139,11 @@ def echo(bot, update):
     if update.message.photo:
         jsondict['msgtype'] = 'media'
         jsondict['msgtype'] = 'image'
-        file_loc = bot.getFile(file_id=update.message.photo[-1].file_id)
-        jsondict['mediaurl'] = file_loc['file_path']
-        jsondict['mediaurluniqid'] = file_loc['file_id']
+
+        fileloc = bot.getFile(file_id=update.message.photo[-1].file_id)
+        jsondict['mediaurl'] = uploadblob(file_loc['file_id'], file_loc['file_path'])
         jsondict['caption'] = None
+
 
     pushjson = json.dumps(jsondict)
     if False: #AZURE_SERVICING:

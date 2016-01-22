@@ -24,8 +24,8 @@ while True:
                 for (typ, val) in resp['response']:
                    respc['restype'] = typ
                    respc['response'] = val
-                   print respc
+                   print respc['response']
             else:
-                print resp
+                print resp['response']
     else:
         time.sleep(0.1)
