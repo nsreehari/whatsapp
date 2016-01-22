@@ -123,7 +123,7 @@ class Sites():
                 def defretstr(msg='', sk=sitekey, st=siteTags):
                     if st:
                         #retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
-                        retstr = 'Please send one of the following:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), st.keys()))
+                        retstr = 'Usage:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), st.keys()))
                     else:
                         retstr = 'No Tags exist for %s - Setup something using %s set TAGNAME' % (sk, sk)
                     return ('text', retstr)
@@ -133,7 +133,7 @@ class Sites():
                         return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number' % (sitekey, sitekey, phonenum))
                     try:
                       if len(kw) == 2:
-                        tagname = int(kw[1])
+                        tagname = '%s' % int(kw[1])
                         siteAllow.append(tagname)
                         self.flushpickle()
                         return ('text', 'Successfully allowed %s for site %s' %(tagname, sitekey))
@@ -144,7 +144,7 @@ class Sites():
                     except:
                         return ('text', 'Invalid command. To allow a phone, Send %s ALLOW PHONE from the original phone number' % (sitekey))
 
-                if 'set' in kw or 'reset' in kw or 'append' in kw :
+                if 'set' in kw or 'reset' in kw or 'append' in kw or 'delete' in kw :
                     if phonenum not in siteAllow:
                         return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number' % (sitekey, sitekey, phonenum))
                     if len(kw) != 2: 
@@ -153,16 +153,27 @@ class Sites():
 
                     if 'set' in kw and tagname in siteTags.keys(): 
                         return ('text', 'Invalid TAGNAME: Given tag already exists for the site %s -- Use %s APPEND TAGNAME to attach the content to and existing tag or  %s RESET TAGNAME to reset existing tag' % (sitekey, sitekey, sitekey) )
-                    if ('reset' in kw or 'append' in kw) and tagname not in siteTags.keys(): 
+                    if ('reset' in kw or 'append' in kw or 'delete' in kw) and tagname not in siteTags.keys(): 
                         return ('text', 'Invalid TAGNAME: Given tag doesn not exist for the site %s -- Use %s SET TAGNAME set existing tag' % (sitekey, sitekey) )
 
                     if 'append' in kw:
                         self.stagetag[phonenum] = ('append', s, tagname)
+                    elif 'delete' in kw:
+                        del siteTags[tagname]
+                        self.flushpickle()
+                        return ('text', 'Deleted %s tag: %s' % (sitekey, tagname))
                     elif 'set' in kw or 'reset' in kw:
                         self.stagetag[phonenum] = ('update', s, tagname)
 
                     return ('text', 'Please send the content for %s tag: %s' % (sitekey, tagname))
-                elif len(kw) < 1 or 'help' == kw[0]:
+                elif len(kw) < 1:
+                    if 'main' in siteTags.keys():
+                        ret1 = deepcopy(siteTags['main'])
+                        ret1.append(defretstr())
+                        return ('list', ret1)
+                    else:
+                        return defretstr()
+                elif 'help' == kw[0]:
                     return defretstr()
                 elif 'adminhelp' == kw[0]:
                     return ('list', [('text', '%s set/reset/append TAG -- for updating a tag ' % (sitekey)), ('text', '%s allow PHONENUMBER -- for allowing another phone for updates') 

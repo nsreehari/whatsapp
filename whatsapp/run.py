@@ -70,8 +70,11 @@ def main():
     #   watchWhatsApp()
 
 
-main()
-try:
+while True:
+  global Counter
+  Counter = 1000
+  try:
+    main()
     unlink('/home/bitnami1/whatsapp/.stopwhatsapp') 
-except:
+  except:
     pass
