@@ -292,7 +292,7 @@ class Default():
         return random.choice(quotes)
 
     def gethelpstring(self):
-        helpstring = "I do not understand that. You can try something like 'quote' or 'getsites' or 'newsite'"
+        helpstring = "Please try @hack"
         return helpstring
 
     def preparse(self, jsondict, phonenum):
