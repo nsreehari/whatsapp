@@ -122,7 +122,8 @@ class Sites():
 
                 def defretstr(msg='', sk=sitekey, st=siteTags):
                     if st:
-                        retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
+                        #retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
+                        retstr = 'Please send one of the following:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), st.keys()))
                     else:
                         retstr = 'No Tags exist for %s - Setup something using %s set TAGNAME' % (sk, sk)
                     return ('text', retstr)

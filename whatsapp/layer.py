@@ -337,7 +337,7 @@ class YowsupEchoStack(object):
         self.stack.broadcastEvent(YowLayerEvent(YowNetworkLayer.EVENT_STATE_CONNECT))
         try:
             logging.info("Whatsapp IS STARTING : ReceiveStack");
-            self.stack.loop(timeout = 1, count = 100)
+            self.stack.loop(timeout=1, count=100)
             logging.info("Stopping ... ");
         except AuthError as e:
             logging.info("Authentication Error: %s" % e.message)

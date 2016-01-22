@@ -13,8 +13,8 @@ from os import unlink
 from layer import SendQueue, AZURE_RECEIVING
 
 logging.basicConfig(filename='/tmp/whatsapp.log', level=logging.INFO)
-crphone="919502037758"
-crpassword="GzBOxFaczlGJF83KPjwSHxnowro="
+crphone="917331134925"
+crpassword="dgG1bPd+XXgTgEdYR7exLTTiC5k="
 credentials = (crphone, crpassword) # replace with your phone and password
 
 Counter = 100
@@ -48,7 +48,7 @@ def watchAzureQueue():
 def watchWhatsApp():
         global Counter
         while not isfile('/home/bitnami1/whatsapp/.stopwhatsapp') and Counter > 0:
-    	    logging.info( '%s' % datetime.now() +  ": Sleeping now")
+    	    logging.info( '%s counter:%s' % (datetime.now(), Counter) +  ": Sleeping now")
             if SendQueue.empty():
     	        time.sleep(1.6)
 	    stack = YowsupEchoStack(credentials, True)
