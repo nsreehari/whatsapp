@@ -136,11 +136,17 @@ class Sites():
 
                 if 'allow' in kw:
                     if phonenum not in siteAllow:
-                        return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number' % (sitekey, sitekey, phonenum))
+                        logger.info( siteAllow)
+                        logger.info( phonenum)
+                        return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number ' % (sitekey, sitekey, phonenum))
                     try:
                       if len(kw) == 2:
                         tagname = '%s' % int(kw[1])
-                        siteAllow.append(tagname)
+                        if tagname[0] == '-' and tagname.replace('-', '') in siteAllow:
+                            siteAllow.remove(tagname.replace('-', ''))
+                        elif tagname[0] != '-' and tagname not in siteAllow:
+                            siteAllow.append(tagname)
+                        logger.info( siteAllow)
                         self.flushpickle()
                         return ('text', 'Successfully allowed %s for site %s' %(tagname, sitekey))
                       elif len(kw) == 1:
@@ -349,7 +355,7 @@ class Serve():
 
         ret = lambda a,b: {'phonenum':jsondict['phonenum'], 'medium':jsondict['medium'] ,'restype': a, 'response': b}
 
-        phonenum = jsondict['phonenum']
+        phonenum = '%s' % jsondict['phonenum']
         #logger.info( self.stagetag)
 
         for sp in self.subparsers:

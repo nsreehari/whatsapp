@@ -8,7 +8,14 @@ from serve import *
 from azure.servicebus import ServiceBusService, Message, Queue
 import logging
 
-logging.basicConfig(filename='/tmp/serving.log', level=logging.INFO)
+#logging.basicConfig(filename='/tmp/serving.log', level=logging.INFO)
+# Enable logging
+logging.basicConfig(filename="/tmp/telegram.log",
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
 
 class AzureConnection():
     def __init__(self):
@@ -29,7 +36,7 @@ class AzureConnection():
         msg = self.bus_service.receive_queue_message('process_incoming', peek_lock=False)
         
         if msg != None and msg.body:
-                logging.info( '%s ' % datetime.now() +  msg.body)
+                logger.info(  msg.body)
                 return json.loads(msg.body)
         else:
                 return None
@@ -37,7 +44,7 @@ class AzureConnection():
     def send(self, jsondict):
         t = json.dumps(jsondict)
         msg = Message(t)
-        logging.info( '%s ' % datetime.now() + t)
+        logger.info(  t)
         Q = jsondict['medium'] + '_sender'
             
         self.bus_service.send_queue_message(Q, msg)

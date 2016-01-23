@@ -29,13 +29,12 @@ from copy import copy, deepcopy
 from azure.storage.blob import BlobService
 from mimetypes import guess_type
 
-from serve import Serve
+from serve_azure import serve, runloop
 
 
-serve1 = Serve()
 
 # Enable logging
-logging.basicConfig(
+logging.basicConfig(filename="/tmp/telegram.log",
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO)
 
@@ -95,7 +94,7 @@ def send_message(bot, sendmsg):
 
             for (restype,response) in ret: 
          
-              logging.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
+              logger.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
               if restype in [ 'image' , 'audio', 'video' ]:
                 if 'localfile' in response.keys():
                      path = response['localfile']
@@ -160,7 +159,7 @@ def echo(bot, update):
             #self.bus_service.send_queue_message('process_incoming', msg)
             pass
     else:
-            retjson = serve1.getResponseWrapper(pushjson, '')
+            retjson = serve.getResponseWrapper(pushjson, '')
             if retjson:
                 send_message(bot, retjson)
 
@@ -191,6 +190,7 @@ def main():
     # Start the Bot
     updater.start_polling()
 
+    runloop()
     # Run the bot until the you presses Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
