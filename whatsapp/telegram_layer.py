@@ -83,7 +83,7 @@ def help(bot, update):
     bot.sendMessage(update.message.chat_id, text='Help!')
 
 
-def sendMessage(bot, sendmsg):
+def send_message(bot, sendmsg):
             
             jsondict = json.loads(sendmsg)
             phonenum = jsondict['phonenum']
@@ -99,6 +99,10 @@ def sendMessage(bot, sendmsg):
               if restype in [ 'image' , 'audio', 'video' ]:
                 if 'localfile' in response.keys():
                      path = response['localfile']
+                elif 'cacheinfo' in response.keys():
+                     path = response['cacheinfo']
+                     M = bot.sendPhoto(phonenum, photo=path)
+                     return
                 else:
                      mediaurl = response['mediaurl']
                      path = '/tmp/' + basename(mediaurl)
@@ -136,14 +140,19 @@ def echo(bot, update):
         jsondict['msgtype'] = 'text'
         jsondict['msgbody'] = update.message.text
 
-    if update.message.photo:
+    elif update.message.photo:
         jsondict['msgtype'] = 'media'
-        jsondict['msgtype'] = 'image'
+        jsondict['mediatype'] = 'image'
 
         fileloc = bot.getFile(file_id=update.message.photo[-1].file_id)
-        jsondict['mediaurl'] = uploadblob(file_loc['file_id'], file_loc['file_path'])
+        jsondict['mediaurl'] = uploadblob(fileloc['file_id'], fileloc['file_path'])
+        jsondict['cacheinfo'] = fileloc['file_id']
         jsondict['caption'] = None
 
+    else:
+        bot.sendMessage(update.message.chat_id, text="Unhandled Message Type")
+        return
+               
 
     pushjson = json.dumps(jsondict)
     if False: #AZURE_SERVICING:
@@ -153,7 +162,7 @@ def echo(bot, update):
     else:
             retjson = serve1.getResponseWrapper(pushjson, '')
             if retjson:
-                sendMessage(bot, retjson)
+                send_message(bot, retjson)
 
 
 

@@ -16,19 +16,25 @@ logger = logging.getLogger(__name__)
 
 def stitchmessage(j, phonenum, tagname):
      logger.info("Attaching content for " + tagname)
+     logger.info(j)
      if j['msgtype'] == 'text':
          stt = ['text', j['msgbody']]
          return stt
      elif j['msgtype'] == 'media':
-       if j['mediatype'] in ['image', 'audio', 'video']:
+       if j['mediatype'] in ['image', 'audio', 'video'] :
          url = j['mediaurl']
          savepath = '/tmp/serve/repo_' + basename(url)
-         urlretrieve(url, savepath)
+         if j['medium'] == 'whatsapp':
+             urlretrieve(url, savepath)
          if isfile(savepath):
              stt = [j['mediatype'], {'localfile':savepath, 'caption': j['caption']}]
              return stt
          else:
-             stt = [j['mediatype'], {'mediaurl':j['mediaurl'], 'caption': j['caption']}]
+             if 'cacheinfo' in j.keys():
+                  jk = j['cacheinfo']
+             else:
+                  jk = ''
+             stt = [j['mediatype'], {'cacheinfo':jk, 'mediaurl':j['mediaurl'], 'caption': j['caption']}]
              return stt
        elif j['mediatype'] in ['location']:
          stt = [j['mediatype'], {'lat':j['lat'], 'long':j['long'], 'encoding':j['encoding'], 'name':j['name'], 'url':j['url']}]
@@ -164,6 +170,7 @@ class Sites():
                         return ('text', 'Deleted %s tag: %s' % (sitekey, tagname))
                     elif 'set' in kw or 'reset' in kw:
                         self.stagetag[phonenum] = ('update', s, tagname)
+                        logger.info( self.stagetag[phonenum])
 
                     return ('text', 'Please send the content for %s tag: %s' % (sitekey, tagname))
                 elif len(kw) < 1:
@@ -230,6 +237,7 @@ class GetSet():
             #flush the self.tagqueue to disk
             self.flushpickle()
 
+            logger.info( self.stagetag)
             del self.stagetag[phonenum]
 
             return ('text', 'Successfully attached to tag:' + tagname)
