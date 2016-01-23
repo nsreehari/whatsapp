@@ -84,52 +84,48 @@ def help(bot, update):
 
 def send_message(bot, sendmsg):
             
-            jsondict = json.loads(sendmsg)
-            phonenum = jsondict['phonenum']
-            if jsondict['restype'] == 'list':
-                ret = jsondict['response']
-            else:
-                ret = [(jsondict['restype'], jsondict['response'])]
+    jsondict = json.loads(sendmsg)
+    phonenum = jsondict['phonenum']
+    if jsondict['restype'] == 'list':
+        ret = jsondict['response']
+    else:
+        ret = [(jsondict['restype'], jsondict['response'])]
  
 
-            for (restype,response) in ret: 
-         
-              logger.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
-              if restype in [ 'image' , 'audio', 'video' ]:
-                if 'localfile' in response.keys():
-                     path = response['localfile']
-                elif 'cacheinfo' in response.keys():
-                     path = response['cacheinfo']
-                     M = bot.sendPhoto(phonenum, photo=path)
-                     return
-                else:
-                     mediaurl = response['mediaurl']
-                     path = '/tmp/' + basename(mediaurl)
-                     if isfile(path):
-                         unlink(path)
-                     urlretrieve(mediaurl, path)
+    for (restype,response) in ret: 
+    
+      logger.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
+      fns = { 
+          'image': lambda path: bot.sendPhoto(phonenum, photo=path),
+          'audio': lambda path: bot.sendAudio(phonenum, audio=path),
+          'voice': lambda path: bot.sendVoice(phonenum, voice=path),
+          'video': lambda path: bot.sendVideo(phonenum, video=path),
+          'document': lambda path: bot.sendDocument(phonenum, document=path),
+          'text': lambda response: bot.sendMessage(phonenum, text=response),
+          'location': lambda response: bot.sendLocation(phonenum, latitude=response['lat'], longitude=response['long']),
+      }
+      fnw = lambda path: fns[restype](path)
 
-                if isfile(path):
-                  if restype == 'image':
-                    M = bot.sendPhoto(phonenum, photo=path)
-                  if restype == 'video':
-                    #  self.video_send(phonenum, path, response['caption'])
-                    # video not supported yet
-                    self.message_send(phonenum, "Video Message not supported yet")
-                    
-                  if restype == 'audio':
-                    # self.audio_send(phonenum, path)
-                    # video not supported yet
-                    self.message_send(phonenum, "Audio Message not supported yet")
-                  unlink(path)
+      if restype in [ 'image' , 'audio', 'video', 'document', 'voice' ]:
+          
+          if 'cacheinfo' in response.keys():
+                 path = response['cacheinfo']
+                 M = fnw(path)
+                 return
+          
+          else:
+              if 'localfile' in response.keys():
+                 path = response['localfile']
+                 M = fnw(open(path, 'rb'))
+                 return
+              else:
+                 path = response['mediaurl']
+                 M = fnw(path)
+                 return
 
-              elif restype == 'text':
-                bot.sendMessage(phonenum, text=response)
-              elif restype == 'vcard':
-                self.vcard_send(phonenum, response['name'],response['carddata'])
-              elif restype == 'location':
-                self.location_send(phonenum, response['lat'],response['long'],
-                       response['name'], response['url'], response['encoding'])
+      elif restype in [ 'text', 'location' ]:
+          M = fnw(response)
+          return
 
 
 def echo(bot, update):
@@ -139,11 +135,40 @@ def echo(bot, update):
         jsondict['msgtype'] = 'text'
         jsondict['msgbody'] = update.message.text
 
-    elif update.message.photo:
+    elif update.message.location:
         jsondict['msgtype'] = 'media'
-        jsondict['mediatype'] = 'image'
+        jsondict['mediatype'] = 'location'
+        jsondict['lat'] = update.message.location.latitude
+        jsondict['long'] = update.message.location.longitude
+        jsondict['name'] = ""
+        jsondict['url'] = ""
+        jsondict['encoding'] = "raw"
 
-        fileloc = bot.getFile(file_id=update.message.photo[-1].file_id)
+    elif update.message.contact:
+        jsondict['msgtype'] = 'media'
+        jsondict['mediatype'] = 'contact'
+        jsondict['carddata'] = update.message.contact.phone_number
+        jsondict['name'] = update.message.contact.first_name
+
+    elif update.message.photo or update.message.video or update.message.audio or update.message.voice or update.message.document :
+        jsondict['msgtype'] = 'media'
+
+        if update.message.photo:
+            jsondict['mediatype'] = 'image'
+            fileloc = bot.getFile(file_id=update.message.photo[-1].file_id)
+        elif update.message.video:
+            jsondict['mediatype'] = 'video'
+            fileloc = bot.getFile(file_id=update.message.video.file_id)
+        elif update.message.audio:
+            jsondict['mediatype'] = 'audio'
+            fileloc = bot.getFile(file_id=update.message.audio.file_id)
+        elif update.message.voice:
+            jsondict['mediatype'] = 'voice'
+            fileloc = bot.getFile(file_id=update.message.voice.file_id)
+        elif update.message.document:
+            jsondict['mediatype'] = 'document'
+            fileloc = bot.getFile(file_id=update.message.document.file_id)
+
         jsondict['mediaurl'] = uploadblob(fileloc['file_id'], fileloc['file_path'])
         jsondict['cacheinfo'] = fileloc['file_id']
         jsondict['caption'] = None
