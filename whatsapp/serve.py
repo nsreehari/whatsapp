@@ -183,6 +183,7 @@ class Sites():
                     if 'main' in siteTags.keys():
                         ret1 = deepcopy(siteTags['main'])
                         ret1.append(defretstr())
+                        logger.info(ret1)
                         return ('list', ret1)
                     else:
                         return defretstr()

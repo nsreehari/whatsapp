@@ -91,7 +91,7 @@ def send_message(bot, sendmsg):
     else:
         ret = [(jsondict['restype'], jsondict['response'])]
  
-
+    logger.info( ret)
     for (restype,response) in ret: 
     
       logger.info(  '%s: Send to %s %s ' % (datetime.now(), phonenum, restype))
@@ -111,21 +111,21 @@ def send_message(bot, sendmsg):
           if 'cacheinfo' in response.keys():
                  path = response['cacheinfo']
                  M = fnw(path)
-                 return
+                 continue
           
           else:
               if 'localfile' in response.keys():
                  path = response['localfile']
                  M = fnw(open(path, 'rb'))
-                 return
+                 continue
               else:
                  path = response['mediaurl']
                  M = fnw(path)
-                 return
+                 continue
 
       elif restype in [ 'text', 'location' ]:
           M = fnw(response)
-          return
+          continue
 
 
 def echo(bot, update):
@@ -150,7 +150,7 @@ def echo(bot, update):
         jsondict['carddata'] = update.message.contact.phone_number
         jsondict['name'] = update.message.contact.first_name
 
-    elif update.message.photo or update.message.video or update.message.audio or update.message.voice or update.message.document :
+    elif update.message.photo :# or update.message.video or update.message.audio or update.message.voice or update.message.document :
         jsondict['msgtype'] = 'media'
 
         if update.message.photo:
