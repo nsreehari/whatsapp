@@ -49,7 +49,8 @@ serve = Serve()
 from os import unlink
 from os.path import isfile
 
-while not isfile('/home/bitnami1/whatsapp/.stopazure'):
+def runloop():
+  while not isfile('/home/bitnami1/whatsapp/.stopazure'):
     receivejson = azureConn.receive()
     if receivejson != None:
         resp = serve.getResponse(receivejson)
@@ -65,7 +66,7 @@ while not isfile('/home/bitnami1/whatsapp/.stopazure'):
     else:
         time.sleep(2.6)
 
-try:
+  try:
     unlink('/home/bitnami1/whatsapp/.stopazure')
-except:
+  except:
     pass
