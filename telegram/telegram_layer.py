@@ -21,7 +21,7 @@ from telegram import Updater
 import logging
 import json, sys
 
-from serve import Serve
+from serve import Serve, TESTSCRIPT
 serve = Serve()
 
 BOTKEY = ""
@@ -33,7 +33,7 @@ if not BOTKEY:
         sys.exit()
 
 # Enable logging
-logging.basicConfig(filename="/tmp/telegram.log",
+logging.basicConfig(filename="/tmp/" + TESTSCRIPT + "telegram.log",
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO)
 
