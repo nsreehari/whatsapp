@@ -99,11 +99,7 @@ elif [ "x$1" = "xrestart" ]; then
     start_gevent > /tmp/Xrestart.log
     cat /tmp/Xrestart.log
 elif [ "x$1" = "xgitupdate" ]; then
-    stop_gevent > /tmp/Xrestart.log
     /bin/sh -c "((cd $OPENERP_HOME && /usr/bin/git pull 2>&1) >>/tmp/Xrestart.log) "
-    sleep 1
-    start_gevent >>/tmp/Xrestart.log
-    /bin/sh -c "((cd $OPENERP_HOME && echo Finish 2>&1) >>/tmp/Xrestart.log) "
     cat /tmp/Xrestart.log
 
 elif [ "x$1" = "xstatus" ]; then
