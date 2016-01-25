@@ -50,6 +50,8 @@ class Sites():
         self.sitestructure = lambda phonenum: { 'tags': {}, 'phones':[phonenum] }
         self.topickle = {'sites': {}}
 
+        self.sitehandle = lambda n : '@%s' % n
+
         try:
             tagsfile = open(self.TAGSFILE, "rb")
             self.topickle = cPickle.load(tagsfile)
@@ -106,10 +108,10 @@ class Sites():
 
             allSites[sitename] = self.sitestructure( phonenum )
             self.flushpickle()
-            return ('text', 'Site %s created. Send %s SET TAGNAME to start a tag for this site' % (sitename, '@'+sitename))
+            return ('text', 'Site %s created. Send %s SET TAGNAME to start a tag for this site' % (sitename, self.sitehandle(sitename)))
 
         elif "getsites" == keywords[0]:
-            sitestr = ' '.join(map(lambda s: '@%s' % s, allSites.keys()))
+            sitestr = ' '.join(map(self.sitehandle(s), allSites.keys()))
             if sitestr:
                 return ('text', "Try 'SITE help' -- Existing Sites: " + sitestr)
             else:
@@ -117,7 +119,7 @@ class Sites():
 
         for s in allSites.keys():
             #check within each site now
-            sitekey = '@%s' % s 
+            sitekey = self.sitehandle(s) 
             if sitekey in keywords:
                 # found @site in the given message i.e. keywords[]
                 kw = copy(keywords)
@@ -331,7 +333,7 @@ class Default():
             return ('text', self.getquote())
         elif keyword == "name":
             return ('text', "Wait, I will soon have something cool")
-        elif keyword == "img@#$SDF#@R$W":
+        elif keyword == "img#$SDF#R$W":
             try:
                 image_number = messageBody.split()[1]
                 if image_number not in ['1', '2', '3', '4', '5', '6', '7']:
