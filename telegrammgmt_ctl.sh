@@ -1,18 +1,16 @@
 #! /bin/sh
 
 
-BOTKEY="135342801:AAFaninNSzDkYU8UzonHeOhcu5fVaPlCC7Y"
-
-OPENERP_HOME="/home/bitnami1/whatsapp/telegram"
-GEVENT_START="$OPENERP_HOME/telegram_layer.py $BOTKEY"
-GEVENT_PROGRAM="telegram_layer.py"
+OPENERP_HOME="/home/bitnami1/whatsapp"
+GEVENT_START="$OPENERP_HOME/telegram_mgmt.py"
+GEVENT_PROGRAM="telegram_mgmt.py"
 GEVENT_STATUS=""
 GEVENT_PID=""
 GEVENT_STATUS=""
 ERROR=0
 
 is_service_running() {
-    GEVENT_PID=`ps ax | awk '/\/[t]elegram_layer.py/ {print $1}'`
+    GEVENT_PID=`ps ax | awk '/\/[t]elegram_mgmt.py/ {print $1}'`
     if [ "x$GEVENT_PID" != "x" ]; then
         RUNNING=1
     else
@@ -25,19 +23,19 @@ is_gevent_running() {
     is_service_running "$GEVENT_PROGRAM"
     RUNNING=$?
     if [ $RUNNING -eq 0 ]; then
-        GEVENT_STATUS="telegram_layer.py not running"
+        GEVENT_STATUS="telegram_mgmt.py not running"
     else
-        GEVENT_STATUS="telegram_layer.py already running"
+        GEVENT_STATUS="telegram_mgmt.py already running"
     fi
     return $RUNNING
 }
 
 start_gevent() {
-    test -f /home/bitnami1/whatsapp/.noazure && echo .noazure exists: exiting &&exit
+    test -f /home/bitnami1/whatsapp/.notelegrammgmt && echo .notelegrammgmt exists: exiting &&exit
     is_gevent_running
     RUNNING=$?
     if [ $RUNNING -eq 1 ]; then
-        echo "$0 $ARG: telegram_layer.py already running"
+        echo "$0 $ARG: telegram_mgmt.py already running"
         exit
     fi
     if [ `id -u` != 0 ]; then
@@ -53,10 +51,10 @@ start_gevent() {
     fi
 
     if [ $ERROR -eq 0 ]; then
-        echo "$0 $ARG: telegram_layer.py started"
+        echo "$0 $ARG: telegram_mgmt.py started"
         sleep 2
     else
-        echo "$0 $ARG: telegram_layer.py could not be started"
+        echo "$0 $ARG: telegram_mgmt.py could not be started"
         ERROR=3
     fi
 }
@@ -80,36 +78,24 @@ stop_gevent() {
     is_gevent_running
     RUNNING=$?
     if [ $RUNNING -eq 0 ]; then
-            echo "$0 $ARG: telegram_layer.py stopped"
+            echo "$0 $ARG: telegram_mgmt.py stopped"
         else
-            echo "$0 $ARG: telegram_layer.py could not be stopped"
+            echo "$0 $ARG: telegram_mgmt.py could not be stopped"
             ERROR=4
     fi
 }
 
 if [ "x$1" = "xstart" ]; then
-    start_gevent > /tmp/Xrestart.log
-    cat /tmp/Xrestart.log
+    start_gevent
 elif [ "x$1" = "xstop" ]; then
-    stop_gevent > /tmp/Xrestart.log
-    cat /tmp/Xrestart.log
+    stop_gevent
 elif [ "x$1" = "xrestart" ]; then
-    stop_gevent > /tmp/Xrestart.log
+    stop_gevent
     sleep 3
-    start_gevent > /tmp/Xrestart.log
-    cat /tmp/Xrestart.log
-elif [ "x$1" = "xgitupdate" ]; then
-    stop_gevent > /tmp/Xrestart.log
-    /bin/sh -c "((cd $OPENERP_HOME && /usr/bin/git pull 2>&1) >>/tmp/Xrestart.log) "
-    sleep 1
-    start_gevent >>/tmp/Xrestart.log
-    /bin/sh -c "((cd $OPENERP_HOME && echo Finish 2>&1) >>/tmp/Xrestart.log) "
-    cat /tmp/Xrestart.log
-
+    start_gevent
 elif [ "x$1" = "xstatus" ]; then
     is_gevent_running
-    echo "$GEVENT_STATUS" > /tmp/Xrestart.log
-    cat /tmp/Xrestart.log
+    echo "$GEVENT_STATUS"
 fi
 
 exit $ERROR

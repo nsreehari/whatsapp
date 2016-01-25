@@ -14,7 +14,7 @@ bus_service = ServiceBusService(
 
 def send(mymsg):
     jsondict = {
-      "msgtype": "text", "msgbody": mymsg, "medium": "myapp", "phonenum": "919700000000"
+      "msgtype": "text", "msgbody": mymsg, "medium": "myapp", "phonenum": "919701277758"
     }
     global bus_service
     msg = Message(json.dumps(jsondict))

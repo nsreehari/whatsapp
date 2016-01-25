@@ -307,7 +307,7 @@ class Default():
         return random.choice(quotes)
 
     def gethelpstring(self):
-        helpstring = "Please try 'inspire me' or refer to your e-mail for appropriate commands"
+        helpstring = "Please try 'inspire me' or refer to your e-mail for appropriate commands to use"
         return helpstring
 
     def preparse(self, jsondict, phonenum):
