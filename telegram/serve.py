@@ -132,9 +132,11 @@ class Teams():
                 siteAllow = siteStruct['phones']
 
                 def defretstr(msg='', sk=sitekey, st=siteTags):
-                    if st:
+                    if st and len(st)>1:
                         #retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
-                        retstr = 'Usage:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), st.keys()))
+                        X = st.keys()
+                        X.remove("main")
+                        retstr = 'Usage:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), X))
                     else:
                         retstr = 'No Tags exist for %s - Setup something using %s set TAGNAME' % (sk, sk)
                     return ('text', retstr)
@@ -298,7 +300,9 @@ class Sites():
                 def defretstr(msg='', sk=sitekey, st=siteTags):
                     if st:
                         #retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
-                        retstr = 'Usage:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), st.keys()))
+                        X = st.keys()
+                        X.remove("main")
+                        retstr = 'Usage:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), X))
                     else:
                         retstr = 'No Tags exist for %s - Setup something using %s set TAGNAME' % (sk, sk)
                     return ('text', retstr)
