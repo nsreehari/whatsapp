@@ -45,178 +45,15 @@ def stitchmessage(j, phonenum, tagname):
          stt = [j['mediatype'], {'name':j['name'], 'carddata':j['carddata']}]
          return stt
 
-class Teams():
-    def __init__(self, cbfn=None):
-        global TESTSCRIPT
-        self.TAGSFILE = '/tmp/serve/' + TESTSCRIPT  + 'tags_teams.pkl' 
-        self.stagetag = {}
-        self.sitestructure = lambda phonenum: { 'tags': {}, 'phones':[phonenum] }
-        self.topickle = {'sites': {}}
-
-        self.sitehandle = lambda n : '@%s' % n
-
-        try:
-            tagsfile = open(self.TAGSFILE, "rb")
-            self.topickle = cPickle.load(tagsfile)
-            tagsfile.close()
-        except IOError:
-            pass
-
-        self.sites = self.topickle['sites']
-
-    def flushpickle(self):
-        output = open(self.TAGSFILE, 'wb')
-        cPickle.dump(self.topickle, output)
-        output.close()
-
-    def preparse(self, j, phonenum):
-      
-        if phonenum in self.stagetag.keys():
-            (cmd, site, tagname) = self.stagetag[phonenum]
-
-            stt = stitchmessage(j, phonenum, tagname)
-            siteStruct = self.sites[site]
-            siteTags = siteStruct['tags']
-            siteAllow = siteStruct['phones']
-
-            if cmd == "append":
-                if tagname in siteTags.keys():
-                    siteTags[tagname].append(stt)
-                    rettext = 'Successfully appended to tag:' + tagname
-                else:
-                    siteTags[tagname] = [ stt ]
-                    rettext = 'Successfully attached to tag:' + tagname
-            else: 
-                siteTags[tagname] = [ stt ]
-                rettext = 'Successfully attached to tag:' + tagname
-
-            #flush the siteTags to disk
-            self.flushpickle()
-
-            del self.stagetag[phonenum]
-
-            return ('text', rettext)
-        else:
-            return None
-
-    def parse(self, messageBody, phonenum):
-        keywords = map(lambda i: i.lower(), messageBody.split())
-        allSites = self.sites
-        if "newteam" == keywords[0]:
-            if len(keywords) != 2: 
-                return ('text', 'Invalid TEAMHANDLE')
-            sitename = keywords[1]
-            if sitename in allSites.keys():
-                return ('text', 'Invalid TEAMHANDLE NAME: Given handle already exists -- Choose a different handle')
-
-            allSites[sitename] = self.sitestructure( phonenum )
-            self.flushpickle()
-            return ('text', 'TEAMHANDLE %s created. Send %s ADD TAGNAME to start a tag for this team' % (sitename, self.sitehandle(sitename)))
-
-        elif "getteams" == keywords[0]:
-            sitestr = ' '.join(map(lambda s: self.sitehandle(s), allSites.keys()))
-            if sitestr:
-                return ('text', "Try 'TEAM help' -- Existing Teams: " + sitestr)
-            else:
-                return ('text', 'No Sites exist: Create one using "newsite SITENAME"')
-
-        for s in allSites.keys():
-            #check within each site now
-            sitekey = self.sitehandle(s) 
-            if sitekey in keywords:
-                # found @site in the given message i.e. keywords[]
-                kw = copy(keywords)
-                kw.remove(sitekey)
-                siteStruct = allSites[s]
-                siteTags = siteStruct['tags']
-                siteAllow = siteStruct['phones']
-
-                def defretstr(msg='', sk=sitekey, st=siteTags):
-                    if st and len(st)>1:
-                        #retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
-                        X = st.keys()
-                        X.remove("main")
-                        retstr = 'Usage:\n' + '\n'.join(map(lambda a: "%s %s" % (sk, a), X))
-                    else:
-                        retstr = 'No Tags exist for %s - Setup something using %s set TAGNAME' % (sk, sk)
-                    return ('text', retstr)
-
-                if 'allow' in kw:
-                    if phonenum not in siteAllow:
-                        logger.info( siteAllow)
-                        logger.info( phonenum)
-                        return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number ' % (sitekey, sitekey, phonenum))
-                    try:
-                      if len(kw) == 2:
-                        tagname = '%s' % int(kw[1])
-                        if tagname[0] == '-' and tagname.replace('-', '') in siteAllow:
-                            siteAllow.remove(tagname.replace('-', ''))
-                        elif tagname[0] != '-' and tagname not in siteAllow:
-                            siteAllow.append(tagname)
-                        logger.info( siteAllow)
-                        self.flushpickle()
-                        return ('text', 'Successfully allowed %s for site %s' %(tagname, sitekey))
-                      elif len(kw) == 1:
-                        return ('text', 'Allowed phone numbers for site %s are %s' %(sitekey, siteAllow))
-                      else:
-                        return ('text', 'Invalid command/phone. To allow a phone, Send %s ALLOW PHONE from the original phone number' % (sitekey))
-                    except:
-                        return ('text', 'Invalid command. To allow a phone, Send %s ALLOW PHONE from the original phone number' % (sitekey))
-
-                if 'set' in kw or 'reset' in kw or 'append' in kw or 'delete' in kw :
-                    if phonenum not in siteAllow:
-                        return ('text', 'This Phone is not allowed for setting tags for %s. To allow this phone, Send %s ALLOW %s from the original phone number' % (sitekey, sitekey, phonenum))
-                    if len(kw) != 2: 
-                        return ('text', 'Invalid TAGNAME')
-                    tagname = kw[1]
-
-                    if 'set' in kw and tagname in siteTags.keys(): 
-                        return ('text', 'Invalid TAGNAME: Given tag already exists for the site %s -- Use %s APPEND TAGNAME to attach the content to and existing tag or  %s RESET TAGNAME to reset existing tag' % (sitekey, sitekey, sitekey) )
-                    if ('reset' in kw or 'append' in kw or 'delete' in kw) and tagname not in siteTags.keys(): 
-                        return ('text', 'Invalid TAGNAME: Given tag doesn not exist for the site %s -- Use %s SET TAGNAME set existing tag' % (sitekey, sitekey) )
-
-                    if 'append' in kw:
-                        self.stagetag[phonenum] = ('append', s, tagname)
-                    elif 'delete' in kw:
-                        del siteTags[tagname]
-                        self.flushpickle()
-                        return ('text', 'Deleted %s tag: %s' % (sitekey, tagname))
-                    elif 'set' in kw or 'reset' in kw:
-                        self.stagetag[phonenum] = ('update', s, tagname)
-                        logger.info( self.stagetag[phonenum])
-
-                    return ('text', 'Please send the content for %s tag: %s' % (sitekey, tagname))
-                elif len(kw) < 1:
-                    if 'main' in siteTags.keys():
-                        ret1 = deepcopy(siteTags['main'])
-                        ret1.append(defretstr())
-                        logger.info(ret1)
-                        return ('list', ret1)
-                    else:
-                        return defretstr()
-                elif 'help' == kw[0]:
-                    return defretstr()
-                elif 'adminhelp' == kw[0]:
-                    return ('list', [('text', '%s set/reset/append TAG -- for updating a tag ' % (sitekey)), ('text', '%s allow PHONENUMBER -- for allowing another phone for updates') 
-                        ] )
-                else:
-                    # Here is the real search for a given TAG
-                    tagname = kw[0]
-                    if tagname in siteTags.keys():
-                        return ('list', siteTags[tagname])
-                    else:
-                        return defretstr(msg="Invalid tag! ")
-
-                return defretstr()
-
-        return None
 
 class Sites():
-    def sitestructure(self, phonenum, isevent):
+    def sitestructure(self, phonenum, isevent, isteam):
+        base = { 'tags': {}, 'phones':[phonenum] }
         if isevent:
-            return { 'eventdata': {'registerlist': set()}, 'tags': {}, 'phones':[phonenum] }
-        else:
-            return { 'tags': {}, 'phones':[phonenum] }
+            base['eventdata'] = {'registerlist': set()}
+        if isteam:
+            base['teamdata'] = {'memberlist': set()}
+        return  base
 
     def __init__(self, cbfn=None):
         global TESTSCRIPT
@@ -273,19 +110,30 @@ class Sites():
     def parse(self, messageBody, phonenum):
         keywords = map(lambda i: i.lower(), messageBody.split())
         allSites = self.sites
-        if keywords[0] in ['newsite', 'newevent']:
+        if keywords[0] in ['newsite', 'newevent', 'newteam']:
+            pstr = 'SITEHANDLE'
+            isevent = False
+            isteam = False
+            if keywords[0] == 'newteam':
+                pstr = 'TEAMHANDLE'
+                isteam = True
+            if keywords[0] == 'newevent':
+                pstr = 'EVENTHANDLE'
+                isevent = True
+
             if len(keywords) != 2: 
-                return ('text', 'Invalid SITENAME')
+                return ('text', 'Invalid Command.  Usage: %s %s' % (keywords[0], pstr))
             sitename = keywords[1]
             if sitename in allSites.keys():
-                return ('text', 'Invalid SITE NAME: Given site already exists -- Choose a different site')
+                return ('text', 'Invalid %s : Given handle already exists -- Choose a different handle' % pstr)
 
-            if keywords[0] in ['newevent']:
-                isevent = True
-            else:
-                isevent = False
-            allSites[sitename] = self.sitestructure( phonenum, isevent )
+            allSites[sitename] = self.sitestructure( phonenum, isevent, isteam )
             self.flushpickle()
+            if isevent:
+                return ('text', 'Event %s created. Send %s register <alias> to register' % (sitename, self.sitehandle(sitename)))
+            if isteam:
+                return ('text', 'Team %s created. Send %s addmember <alias> to add members' % (sitename, self.sitehandle(sitename)))
+
             return ('text', 'Site %s created. Send %s SET TAGNAME to start a tag for this site' % (sitename, self.sitehandle(sitename)))
 
         elif "getsites" == keywords[0]:
@@ -306,18 +154,24 @@ class Sites():
                 siteTags = siteStruct['tags']
                 siteAllow = siteStruct['phones']
                 siteEvent = 'eventdata' in siteStruct.keys()
+                siteTeam = 'teamdata' in siteStruct.keys()
 
-                def defretstr(msg='', sk=sitekey, st=siteTags, se=siteEvent):
+                def defretstr(msg='', sk=sitekey, st=siteTags, se=siteEvent, sm=siteTeam):
+                    retstr = ''
+                    retstr1 = ''
+
+                    if sm:
+                        retstr1 = '%s addmember <alias>\n' % sk + '%s membercount\n' % sk + '%s memberlist\n' % sk
                     if se:
-                        retstr = '%s register <alias>\n' % sk + '%s registercount\n' % sk + '%s registerlist' % sk
+                        retstr = '%s register <alias>\n' % sk + '%s registercount\n' % sk + '%s registerlist\n' % sk
                         #return ('text', retstr)
                     if st:
                         #retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
                         X = st.keys()
                         X.remove("main")
-                        retstr = 'Usage:\n' + retstr + '\n'.join(map(lambda a: "%s %s" % (sk, a), X))
+                        retstr = 'Usage:\n' + retstr + retstr1 + '\n'.join(map(lambda a: "%s %s" % (sk, a), X))
                     else:
-                        retstr = 'Usage:\n' + retstr 
+                        retstr = 'Usage:\n' + retstr + retstr1
                         #retstr = 'No Tags exist for %s - Setup something using %s set TAGNAME' % (sk, sk)
                     return ('text', retstr)
 
@@ -381,6 +235,36 @@ class Sites():
                     return ('list', [('text', '%s set/reset/append TAG -- for updating a tag ' % (sitekey)), ('text', '%s allow PHONENUMBER -- for allowing another phone for updates') 
                         ] )
                 else:
+                    if siteTeam:
+                        siteTeamData = siteStruct['teamdata']
+                        if 'membercount' in kw :  
+                            rl = siteTeamData['memberlist']
+                            if len(kw) != 1:
+                                return ('text', 'Invalid message: Please send %s membercount or %s memberlist' % (sitekey, sitekey))
+                            return ('text', 'Number of Members: %s' % len(rl) )
+                        if 'memberlist' in kw :  
+                            rl = siteEventData['memberlist']
+                            if len(kw) != 1:
+                                return ('text', 'Invalid message: Please send %s membercount or %s memberlist' % (sitekey, sitekey))
+                            return ('text', '\n'.join(map(lambda a: '%s'% a, rl) ) or 'No members added yet')
+
+
+                        if 'addmember' or 'removemember' in kw:
+                            if len(kw) != 2:
+                                return ('text', 'Invalid message: Please send %s addmember/removemember <alias>' % (sitekey))
+                            rl = siteEventData['memberlist']
+                            alias = kw[1]
+                            if 'addmember' == kw[0]:
+                                if (len(rl)>=6) :
+                                    return ('text', 'Max members per team is 6. %s could not be added to %s' % (alias, sitekey))
+
+                                rl.add(alias)
+                                return ('text', 'Added %s to %s ' % (alias, sitekey))
+                            else:
+                                rl.discard(alias)
+                                return ('text', 'Removed %s from %s ' % (alias, sitekey))
+
+
                     if siteEvent:
                         siteEventData = siteStruct['eventdata']
                         if 'registercount' in kw :  
@@ -567,7 +451,7 @@ class Serve():
                 
         call("mkdir -p /tmp/serve".split())
 
-        self.subparsers = [ Teams(), Sites(), GetSet(), Default() ]
+        self.subparsers = [  Sites(), GetSet(), Default() ]
 
 
     def getResponse(self, jsondict):
