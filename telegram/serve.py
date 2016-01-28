@@ -103,7 +103,7 @@ class Sites():
                     rettext = 'Successfully attached to tag:' + tagname
             else:
                 allEmployees = self.employees
-                allEmployees[phonenum][tagname] = [ stt ]
+                allEmployees[phonenum][tagname] =  stt 
                 rettext = 'Successfully updated ' + tagname
 
             #flush the siteTags to disk
@@ -116,7 +116,8 @@ class Sites():
             return None
 
     def parse(self, messageBody, phonenum):
-        keywords = map(lambda i: i.lower(), messageBody.split())
+        Okeywords = messageBody.split()
+        keywords = map(lambda i: i.lower(), Okeywords)
         allSites = self.sites
         allEmployees = self.employees
         if phonenum not in allEmployees.keys():
@@ -124,9 +125,9 @@ class Sites():
         kw0 = keywords[0]
         if kw0 in [ 'get', 'set', 'reset', 'list', 'count']:
             xdict = {
-                'myalias': ('MYALIAS', ' alias', False),
-                'myname': ('MYNAME', ' name', False),
-                'myphoto': ('MYPHOTO', '', True),
+                'myalias': ('MYALIAS', ' alias', False, False),
+                'myname': ('MYNAME', ' name', False, True),
+                'myphoto': ('MYPHOTO', '', True, False),
             }
             if kw0 == 'count' :
                     if len(keywords) != 1: 
@@ -149,7 +150,7 @@ class Sites():
                             r3 = ''
                             pass
                         try:
-                            (r1, r4) = allEmployees[phonenum]['myphoto'][0]
+                            (r1, r4) = allEmployees[phonenum]['myphoto']
                             r5 = r4['mediaurl']
                         except:
                             r5 = ''
@@ -158,29 +159,35 @@ class Sites():
                     return ('text', '\n'.join(map(stitch, allEmployees.keys())))
             kw1 = keywords[1]
             if kw1 in xdict.keys():
-                (pstr, ppstr, asknext) = xdict[kw1]
+                (pstr, ppstr, asknext, unlimited) = xdict[kw1]
 
 
                 if kw0 == 'get':
                     if len(keywords) != 2: 
                         return ('text', 'Invalid Command.  Usage: GET %s' % (ppstr))
                     if kw1 in allEmployees[phonenum].keys():
-                        return ('list', allEmployees[phonenum][kw1])
+                        return  allEmployees[phonenum][kw1]
                     else:
                    
-                        return ('text', 'Not yet set. Set using: SET %s' % (pstr + ppstr))
+                        return ('text', 'Not yet set. Set using: SET %s' % (pstr))
 
                 elif kw0 in [ 'set', 'reset']:
-                    if (not asknext and len(keywords) != 3) or asknext and (len(keywords) != 2): 
+
+                    if (not unlimited) and (not asknext and len(keywords) != 3) or asknext and (len(keywords) != 2): 
                         return ('text', 'Invalid Command.  Usage: SET %s' % (pstr+ppstr))
                     if kw1 in allEmployees[phonenum].keys() and kw0 == 'set'  :
                         return ('text', 'Unsuccessful. %s for %s already set . To update, send RESET %s' % (pstr, phonenum, pstr + ppstr))
 
+                    if unlimited:
+                        allEmployees[phonenum][kw1] = ('text', ' '.join( Okeywords[2:]))
+                        self.flushpickle()
+                        return ('text', 'Successfully updated %s ' % (kw1))
                     if asknext:
                         self.stagetag[phonenum] = ('attach', '', kw1)
                         return ('text', 'Please send content for  %s ' % (kw1))
                     else:
                         allEmployees[phonenum][kw1] = ('text', keywords[2])
+                        self.flushpickle()
                         return ('text', 'Successfully updated %s ' % (kw1))
 
 
