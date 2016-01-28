@@ -59,7 +59,7 @@ class Sites():
         global TESTSCRIPT
         self.TAGSFILE = '/tmp/serve/' + TESTSCRIPT + 'tags_sites.pkl'
         self.stagetag = {}
-        self.topickle = {'sites': {}}
+        self.topickle = {'sites': {}, 'employees':{}}
 
         self.sitehandle = lambda n : '@%s' % n
 
@@ -67,7 +67,10 @@ class Sites():
             tagsfile = open(self.TAGSFILE, "rb")
             self.topickle = cPickle.load(tagsfile)
             tagsfile.close()
-        except IOError:
+            self.employees = self.topickle['employees']
+        except:
+            self.topickle['employees'] = {}
+            self.employees = self.topickle['employees']
             pass
 
         self.sites = self.topickle['sites']
@@ -83,20 +86,25 @@ class Sites():
             (cmd, site, tagname) = self.stagetag[phonenum]
 
             stt = stitchmessage(j, phonenum, tagname)
-            siteStruct = self.sites[site]
-            siteTags = siteStruct['tags']
-            siteAllow = siteStruct['phones']
+            if site:
+                siteStruct = self.sites[site]
+                siteTags = siteStruct['tags']
+                siteAllow = siteStruct['phones']
 
-            if cmd == "append":
-                if tagname in siteTags.keys():
-                    siteTags[tagname].append(stt)
-                    rettext = 'Successfully appended to tag:' + tagname
-                else:
+                if cmd == "append":
+                    if tagname in siteTags.keys():
+                        siteTags[tagname].append(stt)
+                        rettext = 'Successfully appended to tag:' + tagname
+                    else:
+                        siteTags[tagname] = [ stt ]
+                        rettext = 'Successfully attached to tag:' + tagname
+                else: 
                     siteTags[tagname] = [ stt ]
                     rettext = 'Successfully attached to tag:' + tagname
-            else: 
-                siteTags[tagname] = [ stt ]
-                rettext = 'Successfully attached to tag:' + tagname
+            else:
+                allEmployees = self.employees
+                allEmployees[phonenum][tagname] = [ stt ]
+                rettext = 'Successfully updated ' + tagname
 
             #flush the siteTags to disk
             self.flushpickle()
@@ -110,6 +118,72 @@ class Sites():
     def parse(self, messageBody, phonenum):
         keywords = map(lambda i: i.lower(), messageBody.split())
         allSites = self.sites
+        allEmployees = self.employees
+        if phonenum not in allEmployees.keys():
+            allEmployees[phonenum] = {}
+        kw0 = keywords[0]
+        if kw0 in [ 'get', 'set', 'reset', 'list', 'count']:
+            xdict = {
+                'myalias': ('MYALIAS', ' alias', False),
+                'myname': ('MYNAME', ' name', False),
+                'myphoto': ('MYPHOTO', '', True),
+            }
+            if kw0 == 'count' :
+                    if len(keywords) != 1: 
+                        return ('text', 'Invalid Command.  Usage: list' )
+
+                    return ('text', len(allEmployees))
+            if kw0 == 'list' :
+                    if len(keywords) != 1: 
+                        return ('text', 'Invalid Command.  Usage: list' )
+
+                    def stitch(phonenum): 
+                        try:
+                            (r1, r2) = allEmployees[phonenum]['myalias']
+                        except:
+                            r2 = ''
+                            pass
+                        try:
+                            (r1, r3) = allEmployees[phonenum]['myname']
+                        except:
+                            r3 = ''
+                            pass
+                        try:
+                            (r1, r4) = allEmployees[phonenum]['myphoto'][0]
+                            r5 = r4['mediaurl']
+                        except:
+                            r5 = ''
+                            pass
+                        return "%s,%s,%s,%s" % (r2, r3, phonenum, r5)
+                    return ('text', '\n'.join(map(stitch, allEmployees.keys())))
+            kw1 = keywords[1]
+            if kw1 in xdict.keys():
+                (pstr, ppstr, asknext) = xdict[kw1]
+
+
+                if kw0 == 'get':
+                    if len(keywords) != 2: 
+                        return ('text', 'Invalid Command.  Usage: GET %s' % (ppstr))
+                    if kw1 in allEmployees[phonenum].keys():
+                        return ('list', allEmployees[phonenum][kw1])
+                    else:
+                   
+                        return ('text', 'Not yet set. Set using: SET %s' % (pstr + ppstr))
+
+                elif kw0 in [ 'set', 'reset']:
+                    if (not asknext and len(keywords) != 3) or asknext and (len(keywords) != 2): 
+                        return ('text', 'Invalid Command.  Usage: SET %s' % (pstr+ppstr))
+                    if kw1 in allEmployees[phonenum].keys() and kw0 == 'set'  :
+                        return ('text', 'Unsuccessful. %s for %s already set . To update, send RESET %s' % (pstr, phonenum, pstr + ppstr))
+
+                    if asknext:
+                        self.stagetag[phonenum] = ('attach', '', kw1)
+                        return ('text', 'Please send content for  %s ' % (kw1))
+                    else:
+                        allEmployees[phonenum][kw1] = ('text', keywords[2])
+                        return ('text', 'Successfully updated %s ' % (kw1))
+
+
         if keywords[0] in ['newsite', 'newevent', 'newteam']:
             pstr = 'SITEHANDLE'
             isevent = False

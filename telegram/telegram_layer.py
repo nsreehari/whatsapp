@@ -137,7 +137,7 @@ def echo(bot, update):
             jsondict['mediatype'] = 'document'
             fileloc = bot.getFile(file_id=update.message.document.file_id)
 
-        jsondict['mediaurl'] = ""
+        jsondict['mediaurl'] =  fileloc['file_path']
         jsondict['cacheinfo'] = fileloc['file_id']
         jsondict['caption'] = None
 
