@@ -172,7 +172,8 @@ class Sites():
                         except:
                             r5 = ''
                             pass
-                        return "%s,%s,%s,%s" % (r2, r3, phonenum, r5)
+                        #return "%s,%s,%s,%s" % (r2, r3, phonenum, r5)
+                        return "%s,%s" % (r2, phonenum)
                     return ('text', '\n'.join(map(stitch, allEmployees.keys())))
             kw1 = keywords[1]
             if kw1 in xdict.keys():
@@ -228,7 +229,7 @@ class Sites():
             allSites[sitename] = self.sitestructure( phonenum, isevent, isteam )
             self.flushpickle()
             if isevent:
-                return ('text', 'Event %s created. Send %s register <alias> to register' % (sitename, self.sitehandle(sitename)))
+                return ('text', 'Event %s created. Send %s register to register' % (sitename, self.sitehandle(sitename)))
             if isteam:
                 return ('text', 'Team %s created. Send %s addmember <alias> to add members' % (sitename, self.sitehandle(sitename)))
 
@@ -261,7 +262,7 @@ class Sites():
                     if sm:
                         retstr1 = '%s addmember <alias>\n' % sk + '%s membercount\n' % sk + '%s memberlist\n' % sk
                     if se:
-                        retstr = '%s register <alias>\n' % sk + '%s registercount\n' % sk + '%s registerlist\n' % sk
+                        retstr = '%s register \n' % sk + '%s registercount\n' % sk + '%s registerlist\n' % sk
                         #return ('text', retstr)
                     if st:
                         #retstr = '%s Use %s TAG -- where TAG is one of [%s]' % (msg, sk, ', '.join( st.keys() ))
@@ -379,10 +380,15 @@ class Sites():
 
 
                         if 'register' or 'unregister' in kw:
-                            if len(kw) != 2:
-                                return ('text', 'Invalid message: Please send %s register <alias>' % (sitekey))
+                            if len(kw) != 1:
+                                return ('text', 'Invalid message: Please send %s register ' % (sitekey))
                             rl = siteEventData['registerlist']
-                            alias = kw[1]
+                            try:
+                               (r1, r2) = allEmployees[phonenum]['myalias']
+                            except:
+                                return ('text', 'Invalid registration: Your alias is not registered. Please send "set myalias ALIAS" first ' )
+
+                            alias = r2
                             if 'register' == kw[0]:
                                 rl.add(alias)
                                 return ('text', 'Registered %s for %s ' % (alias, sitekey))
