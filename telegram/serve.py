@@ -103,7 +103,15 @@ class Sites():
                     rettext = 'Successfully attached to tag:' + tagname
             else:
                 allEmployees = self.employees
-                allEmployees[phonenum][tagname] =  stt 
+                if tagname == 'next' and cmd == 'broadcast':
+                    (rst, rsp) = stt
+                    X = {}
+                    X['employees'] = allEmployees.keys()
+                    X['restype'] = rst
+                    X['response'] = rsp
+                    return ('broadcast', X)
+                else:
+                    allEmployees[phonenum][tagname] =  stt 
                 rettext = 'Successfully updated ' + tagname
 
             #flush the siteTags to disk
@@ -123,12 +131,21 @@ class Sites():
         if phonenum not in allEmployees.keys():
             allEmployees[phonenum] = {}
         kw0 = keywords[0]
-        if kw0 in [ 'get', 'set', 'reset', 'list', 'count']:
+        if kw0 in [ 'get', 'set', 'reset', 'list', 'count', 'broadcastmsg']:
             xdict = {
                 'myalias': ('MYALIAS', ' alias', False, False),
                 'myname': ('MYNAME', ' name', False, True),
                 'myphoto': ('MYPHOTO', '', True, False),
             }
+            if kw0 == 'broadcastmsg' :
+                if len(keywords) < 2:
+                        return ('text', 'Invalid Command.  Usage: BROADCASTMG msessage' )
+                elif keywords[1] == 'next':
+                        self.stagetag[phonenum] = ('broadcast', '', keywords[1])
+                        return ('text', 'Please send message to be boradcasted %s ' % (keywords[1]))
+                else:
+                    return ('broadcast', {'employees':allEmployees.keys(), 'response': ' '.join(Okeywords[1:]), 'restype':'text'} )
+
             if kw0 == 'count' :
                     if len(keywords) != 1: 
                         return ('text', 'Invalid Command.  Usage: list' )

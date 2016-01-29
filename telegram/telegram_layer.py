@@ -54,14 +54,32 @@ def send_message(bot, sendmsg):
             
     jsondict = json.loads(sendmsg)
     phonenum = jsondict['phonenum']
-    if jsondict['restype'] == 'list':
+
+    if jsondict['restype'] == 'broadcast':
         ret = jsondict['response']
+        for phonenum in ret['employees']:
+            p = int(phonenum)
+            restype = ret['restype']
+            response = ret['response']
+            if (restype == 'text'):
+                response = 'Message from Admin:\n' + response
+            else:
+                send_message_single(bot, phonenum, 'text', 'Message from Admin:\n')
+            send_message_single(bot, phonenum, restype, response)
+        return
+
+    elif jsondict['restype'] == 'list':
+        ret = jsondict['response']
+        logger.info( ret)
+        for (restype,response) in ret: 
+            send_message_single(bot, phonenum, restype, response)
     else:
         ret = [(jsondict['restype'], jsondict['response'])]
- 
-    logger.info( ret)
-    for (restype,response) in ret: 
-    
+        logger.info( ret)
+        for (restype,response) in ret: 
+            send_message_single(bot, phonenum, restype, response)
+
+def send_message_single(bot,  phonenum, restype, response):
       logger.info(  'Send to %s %s ' % (phonenum, restype))
       fns = { 
           'image': lambda path: bot.sendPhoto(phonenum, photo=path),
@@ -79,21 +97,21 @@ def send_message(bot, sendmsg):
           if 'cacheinfo' in response.keys():
                  path = response['cacheinfo']
                  M = fnw(path)
-                 continue
+                 return
           
           else:
               if 'localfile' in response.keys():
                  path = response['localfile']
                  M = fnw(open(path, 'rb'))
-                 continue
+                 return
               else:
                  path = response['mediaurl']
                  M = fnw(path)
-                 continue
+                 return
 
       elif restype in [ 'text', 'location' ]:
           M = fnw(response)
-          continue
+          return
 
 
 def echo(bot, update):
