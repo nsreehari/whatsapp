@@ -14,7 +14,8 @@ bus_service = ServiceBusService(
 
 def send(mymsg):
     jsondict = {
-      "msgtype": "text", "msgbody": mymsg, "medium": "BHH", "phonenum": "919701277758"
+      "msgtype": "json", "msgbody": mymsg, 
+      "medium": "BHH1", "phonenum": "919701277758"
     }
     global bus_service
     msg = Message(json.dumps(jsondict))
@@ -23,7 +24,7 @@ def send(mymsg):
 def receive():
     global bus_service
 
-    msg = bus_service.receive_queue_message('BHH_OUTPUT', peek_lock=False)
+    msg = bus_service.receive_queue_message('BHH1_OUTPUT', peek_lock=False)
     try: 
         print "> ", json.loads(msg.body)['response']
     except:
@@ -49,8 +50,53 @@ try:
        mymsg = sys.argv[1]
        main(mymsg)
 except:
-       mymsg = 'quote'
+       mymsgschema = {
+        "FormName": "Visitor Entry",
+        "TemplateName": "visitor",
+        "Keywords": ["visitor entry", "entry", "visitor"],
+        "fields": [
+                {
+                        "DisplayName": "Visitor Name",
+                        "type": "text",
+                        "id": "name",
+                        "optional": "false"
+                }, 
+                {
+                        "DisplayName": "Visitor Contact Number",
+                        "type": "text",
+                        "id": "vcontact",
+                        "optional": "false"
+                },
+                {
+                        "DisplayName": "Visitor Address",
+                        "type": "text",
+                        "id": "vaddress",
+                        "optional": "false"
+                },
+                {
+                        "DisplayName": "Host Name",
+                        "type": "text",
+                        "id": "hname",
+                        "optional": "false"
+                },
+                {
+                        "DisplayName": "Host Contact Number",
+                        "type": "text",
+                        "id": "hcontact",
+                        "optional": "false"
+                },
+                {
+                        "DisplayName": "Host approved",
+                        "type": "checkbox",
+                        "id": "happroved",
+                        "Options": ["yes"],
+                        "optional": "false"
+                }
+        ]
+
+               }
+       mymsg = {'action':'createtable', 'tablename':'table1', 'schema':mymsgschema}
        print mymsg
        send(mymsg)
-       receive()
+#       receive()
 

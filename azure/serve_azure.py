@@ -19,6 +19,9 @@ logging.basicConfig(filename="/tmp/serving.log",
 
 logger = logging.getLogger(__name__)
 
+queue_options = Queue()
+queue_options.max_size_in_megabytes = '5120'
+queue_options.default_message_time_to_live = 'PT96H'
 
 class AzureConnection():
     def __init__(self):
@@ -26,9 +29,6 @@ class AzureConnection():
             service_namespace='msgtestsb',
             shared_access_key_name='RootManageSharedAccessKey',
             shared_access_key_value='Ar9fUCZQdTL7cVWgerdNOB7sbQp0cWEeQyTRYUjKwpk=')
-        queue_options = Queue()
-        queue_options.max_size_in_megabytes = '5120'
-        queue_options.default_message_time_to_live = 'PT96H'
 
         self.bus_service.create_queue(INPUTQUEUE, queue_options)
         self.bus_service.create_queue(OUTPUTQUEUE + '_OUTPUT', queue_options)
@@ -49,6 +49,8 @@ class AzureConnection():
         logger.info(  t)
         Q = jsondict['medium'] + '_OUTPUT'
             
+        self.bus_service.create_queue(Q, queue_options)
+        #logger.info( msg )
         self.bus_service.send_queue_message(Q, msg)
 
 

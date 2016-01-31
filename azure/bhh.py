@@ -409,6 +409,95 @@ class Sites():
 
         return None
 
+class Tables():
+    def __init__(self, cbfn=None):
+        global TESTSCRIPT
+        self.TAGSFILE = '/tmp/serve/' + TESTSCRIPT + 'tags_tables.pkl'
+        self.stagetag = {}
+        self.topickle = { 'tags': {}, 'tables': {} }
+
+        try:
+            tagsfile = open(self.TAGSFILE, "rb")
+            self.topickle = cPickle.load(tagsfile)
+            tagsfile.close()
+        except IOError:
+            pass
+
+        self.tablestructure = lambda s: {'schema': s, 'records':[]}
+
+        self.tagqueue = self.topickle['tags']
+        self.tables = self.topickle['tables']
+
+    def flushpickle(self):
+        output = open(self.TAGSFILE, 'wb')
+        cPickle.dump(self.topickle, output)
+        output.close()
+
+    def preparse(self, j, phonenum):
+            return None
+
+    def parse(self, messageBody, phonenum): 
+
+        logger.info(messageBody)
+        if messageBody:
+           mb = messageBody  
+        else:
+           return
+
+        allTables = self.tables
+        try:
+            act = mb['action'] 
+            tablename = mb['tablename'] 
+
+            if act == 'createtable':
+                schema = mb['schema']
+                if tablename in allTables.keys():
+                    return ('text', 'Error! Tablename already exists!')
+
+                allTables[tablename] = self.tablestructure(schema)
+                self.flushpickle()
+                return ('text', 'ok')
+            else:
+                if tablename not in allTables.keys():
+                    return ('text', 'Error! Tablename does not exist!')
+
+            mytable = allTables[tablename]
+            records = mytable['records']
+
+            if act == 'updateschema':
+                mytable['schema'] = mb['schema']
+                self.flushpickle()
+                return ('text', 'ok')
+
+            if act == 'getschema':
+                return ('json', mytable['schema'])
+
+
+            if act == 'appendrecord':
+                content = mb['content']
+                records.append(content)
+                self.flushpickle()
+                return ('text', 'ok')
+
+            if act == 'getallrecords':
+                return ('json', records)
+
+            if act == 'getrecordscount':
+                return ('text', '%s' % len(records))
+
+            if act == 'getsummary':
+                colname = mb['colname']
+                funcname = mb['funcname']
+                if funcname == 'sum':
+                    return ('text', reduce( lambda a,b: a+b,  map(lambda r: r[colname], records) ))
+
+
+        except:
+            logger.info('Error! Exception')
+            return ('text', 'Error! Exception')
+
+        return None
+
 
 class GetSet():
     def __init__(self, cbfn=None):
@@ -555,7 +644,7 @@ class Serve():
                 
         call("mkdir -p /tmp/serve".split())
 
-        self.subparsers = [  Sites(), GetSet(), Default() ]
+        self.subparsers = [ Tables(),  Default() ]
 
 
     def getResponse(self, jsondict):
@@ -571,11 +660,12 @@ class Serve():
                 (a, b) = ret1
                 return ret(a, b)
 
-        if jsondict['msgtype'] != 'text':
+        if jsondict['msgtype'] not in ['text', 'json']:
             return None
 
         for sp in self.subparsers:
             ret1 = sp.parse(jsondict['msgbody'], phonenum)
+            logger.info(ret1)
             if ret1:
                 (restype, response) = ret1
                 return ret(restype, response)
