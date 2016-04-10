@@ -1,0 +1,69 @@
+(lp0
+S'You know when you\'re in love when you can\'t fall asleep because reality is finally better than your dreams.'
+p1
+aS'When you trip over love, it is easy to get up. But when you fall in love, it is impossible to stand again.'
+p2
+aS'If a thing loves, it is infinite.'
+p3
+aS'With love one can live even without happiness.'
+p4
+aS'It\'s an unexplainable feeling, an expression. It\'s a touch, it\'s a feel. Once you feel it, it\'s like no other thing in the world.'
+p5
+aS'The best and most beautiful things in this world cannot be seen or even heard, but must be felt with the heart.'
+p6
+aS'To love is nothing. To be loved is something. But to love and be loved, that\x92s everything.'
+p7
+aS'The heart wants what it wants. There\'s no logic to these things. You meet someone and you fall in love and that\'s that.'
+p8
+aS'There\'s no substitute for a great love who says, \'No matter what\'s wrong with you, you\'re welcome at this table.\''
+p9
+aS'You don\'t love someone because they\'re perfect, you love them in spite of the fact that they\'re not.'
+p10
+aS'If I know what love is, it is because of you.'
+p11
+aS'When you realize you want to spend the rest of your life with somebody, you want the rest of your life to start as soon as possible.'
+p12
+aS'At the touch of love everyone becomes a poet.'
+p13
+aS'We are most alive when we\'re in love.'
+p14
+aS'Love means never having to say you\x92re sorry.'
+p15
+aS'Pleasure of love lasts but a moment. Pain of love lasts a lifetime.'
+p16
+aS'Being deeply loved by someone gives you strength, while loving someone deeply gives you courage.'
+p17
+aS'Love is like war: easy to begin but very hard to stop.'
+p18
+aS'Every person has to love at least one bad partner in their lives to be truly thankful for the right one.'
+p19
+aS'We are shaped and fashioned by those we love.'
+p20
+aS'When love is not madness it is not love.'
+p21
+aS'Love is so short, forgetting is so long.'
+p22
+aS'One word frees us of all the weight and pain of life: That word is love.'
+p23
+aS'You know it\'s love when all you want is that person to be happy, even if you\'re not part of their happiness.'
+p24
+aS'The greater your capacity to love, the greater your capacity to feel the pain.'
+p25
+aS'A kiss is a lovely trick designed by nature to stop speech when words become superfluous.'
+p26
+aS'When two people love each other, they don\'t look at each other, they look in the same direction.'
+p27
+aS'The greatest thing you\'ll ever learn Is to love and be loved in return.'
+p28
+aS'I have decided to stick to love; hate is too great a burden to bear.'
+p29
+aS'You don\'t love someone for their looks, or their clothes, or for their fancy car, but because they sing a song only you can hear.'
+p30
+aS'Better to have lost and loved than never to have loved at all.'
+p31
+aS'All you need is love. But a little chocolate now and then doesn\'t hurt.'
+p32
+aS'Where there is love there is life.'
+p33
+a.
+

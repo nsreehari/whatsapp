@@ -1,0 +1,18 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "pypy"
+  - "pypy3"
+install:
+  - pip install coveralls
+  - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
+script:
+  - nosetests --with-coverage --cover-package telegram/
+  - flake8 telegram
+  - 'if [[ $TRAVIS_PYTHON_VERSION != 2.6 ]]; then pylint -E telegram --disable=no-name-in-module,import-error; fi'
+after_success:
+  coveralls
