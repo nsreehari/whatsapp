@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
 def start(bot, update):
-    bot.sendMessage(update.message.chat_id, text='Hi!')
+    bot.sendMessage(update.message.chat_id, text='Hi Hari!')
 
 from subprocess import call
 def restart(bot, update):
@@ -51,6 +51,21 @@ def restart(bot, update):
     outp  =''.join(open("/tmp/Xrestart.log"))
     bot.sendMessage(update.message.chat_id, text=outp)
     bot.sendMessage(update.message.chat_id, text='Done!')
+
+def astatus(bot, update):
+    call("/home/bitnami1/whatsapp/azurequeue_ctl.sh status".strip().split())
+    outp  =''.join(open("/tmp/Xrestart.log"))
+    bot.sendMessage(update.message.chat_id, text=outp)
+
+def astop(bot, update):
+    call("/home/bitnami1/whatsapp/azurequeue_ctl.sh stop".strip().split())
+    outp  =''.join(open("/tmp/Xrestart.log"))
+    bot.sendMessage(update.message.chat_id, text=outp)
+
+def astart(bot, update):
+    call("/home/bitnami1/whatsapp/azurequeue_ctl.sh start".strip().split())
+    outp  =''.join(open("/tmp/Xrestart.log"))
+    bot.sendMessage(update.message.chat_id, text=outp)
 
 def tstatus(bot, update):
     call("/home/bitnami1/whatsapp/telegram_ctl.sh status".strip().split())
@@ -90,6 +105,9 @@ def main():
     dp.addTelegramCommandHandler("tstart", tstart)
     dp.addTelegramCommandHandler("tstop", tstop)
     dp.addTelegramCommandHandler("tstatus", tstatus)
+    dp.addTelegramCommandHandler("astart", astart)
+    dp.addTelegramCommandHandler("astop", astop)
+    dp.addTelegramCommandHandler("astatus", astatus)
     dp.addTelegramCommandHandler("help", help)
 
     # on noncommand i.e message - echo the message on Telegram

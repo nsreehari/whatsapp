@@ -467,7 +467,7 @@ class Tables():
             if act == 'updateschema':
                 mytable['schema'] = mb['schema']
                 self.flushpickle()
-                return ('text', 'ok')
+                return ('text', 'updated')
 
             if act == 'getschema':
                 return ('json', mytable['schema'])
@@ -477,7 +477,7 @@ class Tables():
                 content = mb['content']
                 records.append(content)
                 self.flushpickle()
-                return ('text', 'ok')
+                return ('text', 'appended')
 
             if act == 'getallrecords':
                 return ('json', records)
@@ -485,6 +485,11 @@ class Tables():
             if act == 'getrecordscount':
                 return ('text', '%s' % len(records))
 
+            if act == 'deleteallrecord':
+                mytable['records'] = []
+                return ('text', 'deleted')
+
+            
             if act == 'getsummary':
                 colname = mb['colname']
                 funcname = mb['funcname']
@@ -493,6 +498,7 @@ class Tables():
 
 
         except:
+            return None
             logger.info('Error! Exception')
             return ('text', 'Error! Exception')
 

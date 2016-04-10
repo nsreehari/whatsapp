@@ -10,7 +10,7 @@ import logging
 
 #logging.basicConfig(filename='/tmp/serving.log', level=logging.INFO)
 # Enable logging
-logging.basicConfig(filename="/tmp/telegram.log",
+logging.basicConfig(filename="/tmp/serving.log",
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO)
 

@@ -14,16 +14,16 @@ bus_service = ServiceBusService(
 
 def send(mymsg):
     jsondict = {
-      "msgtype": "text", "msgbody": mymsg, "medium": "myapp", "phonenum": "919701277758"
+      "msgtype": "text", "msgbody": mymsg, "medium": "BHH", "phonenum": "919701277758"
     }
     global bus_service
     msg = Message(json.dumps(jsondict))
-    bus_service.send_queue_message('process_incoming', msg)
+    bus_service.send_queue_message('INPUT', msg)
 
 def receive():
     global bus_service
 
-    msg = bus_service.receive_queue_message('myapp_sender', peek_lock=False)
+    msg = bus_service.receive_queue_message('BHH_OUTPUT', peek_lock=False)
     try: 
         print "> ", json.loads(msg.body)['response']
     except:

@@ -2,7 +2,7 @@
 
 
 
-OPENERP_HOME="/home/bitnami1/whatsapp/whatsapp"
+OPENERP_HOME="/home/bitnami1/whatsapp/azure"
 GEVENT_START="$OPENERP_HOME/serve_azure.py"
 GEVENT_PROGRAM="serve_azure.py"
 GEVENT_STATUS=""
@@ -87,11 +87,11 @@ stop_gevent() {
 }
 
 if [ "x$1" = "xstart" ]; then
-    start_gevent
+    start_gevent >/tmp/Xrestart.log
 elif [ "x$1" = "xstop" ]; then
-    stop_gevent
+    stop_gevent >/tmp/Xrestart.log
 elif [ "x$1" = "xstatus" ]; then
-    is_gevent_running
+    is_gevent_running >/tmp/Xrestart.log
     echo "$GEVENT_STATUS"
 fi
 
