@@ -27,6 +27,11 @@ serve = Serve()
 BOTKEY = ""
 if not BOTKEY:
     try:
+        BOTKEY = open(".BOTKEY").read().strip()
+    except:
+        pass
+if not BOTKEY:
+    try:
         BOTKEY = sys.argv[1]
     except:
         print "BOTKEY not provided"
