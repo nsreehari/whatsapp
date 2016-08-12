@@ -1,0 +1,12 @@
+
+This is my source
+
+https://bitbucket.org/master_groosha/telegram-proxy-bot
+
+depends on 
+Python 3 (maybe works with Python 2, but I haven't tested it);
+•pyTelegramBotAPI library;
+•Telegram account.
+
+use apt-get install python3 pip3
+Use pip3 install pyTelegramBotAPI 
